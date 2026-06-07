@@ -1,13 +1,15 @@
 import { useTexture } from "@react-three/drei";
 
-const EARTH_RADIUS_METERS = 6_371_000;
-
-export function Earth() {
+/**
+ * Earth as a textured sphere, centered at the tier origin. `radius` is given in
+ * the tier's authored units (meters for the Earth tier, 1000-km units for Solar).
+ */
+export function EarthGlobe({ radius }: { radius: number }) {
 	const texture = useTexture("/textures/earth_daymap.jpg");
 
 	return (
-		<mesh position={[0, -EARTH_RADIUS_METERS, 0]}>
-			<sphereGeometry args={[EARTH_RADIUS_METERS, 64, 64]} />
+		<mesh frustumCulled={false}>
+			<sphereGeometry args={[radius, 64, 64]} />
 			<meshStandardMaterial map={texture} />
 		</mesh>
 	);

@@ -20,28 +20,30 @@ whole Earth is needed, and we explicitly want to avoid building multiple levels
 of detail (LOD). One true-scale local scene + one Earth sphere is the target
 architecture — see "Core technical decision" below.
 
-## Core technical decision for now: one true-scale coordinate space
+## Core technical decision: discrete normalized tiers (SUPERSEDES the old single-space plan)
 
-Early design discussion considered a "floating origin" / scaled-space approach
-(common in space games to deal with float precision at planetary scales) but
-**rejected it as unnecessary** for this game. Reasoning:
+> **Pivot (Milestone 3).** An earlier version of this section argued for **one
+> true-scale meter coordinate space, no scaled space**. That was correct for
+> *Earth alone*, but it provably cannot reach the outer tiers (solar system →
+> galaxy → universe spans ~27 orders of magnitude; float32 holds ~7). We have
+> **deliberately pivoted** to a discrete, individually-normalized **tier system**
+> with a seamless cross-fade handoff between tiers. **Do not "simplify" back to a
+> single coordinate space.**
 
-- Three.js computes the model-view matrix in float64 on the CPU and only
-  downcasts to float32 for the GPU — objects render precisely whenever the
-  camera is near them, and lose precision only when far away (which is when you
-  can't see the error anyway).
-- **Placing the world origin at the base of the mountain** (not Earth's center)
-  keeps every coordinate the player interacts with under ~10,000 — comfortably
-  within float32's sub-millimeter precision range.
-- The **logarithmic depth buffer** (`gl={{ logarithmicDepthBuffer: true }}`) is
-  the one non-negotiable setting — without it, rendering both nearby terrain and
-  a 12,700km-wide planet in the same frame causes catastrophic z-fighting.
+The mechanism is the heart of the project and is documented in full — with its
+load-bearing invariants — in **[`docs/tier-system.md`](./tier-system.md). Read
+that before touching any scale/zoom/camera code.** In short:
 
-This means: **no floating origin, no LOD hierarchy, no scaled space yet.** Just one
-real-meters coordinate system, origin at the mountain's base, Y-up, with a wide
-`near`/`far` camera range and the log depth buffer turned on.
+- Each tier is its own scene, normalized so **Earth's radius = 1 canonical unit**
+  (`canonScale = metersPerUnit / EARTH_RADIUS_M`). This makes one camera/dolly
+  drive every tier, and makes the seam between tiers invisible.
+- The **logarithmic depth buffer** (`gl={{ logarithmicDepthBuffer: true }}`)
+  remains non-negotiable.
+- The Earth↔Solar handoff is built and the seam is **verified seamless**.
 
-If necessary to continue the project, we can revisit this.
+The "world origin at the mountain base" idea from the old plan is gone — the
+origin is now **Earth's center**, the camera orbits it, and **panning is disabled**
+(panning breaks the seam math — see the invariants doc).
 
 ## Planned scene layout (from the original design discussion)
 
@@ -97,6 +99,32 @@ highest remaining technical risk: rendering a ~10km mountain and a
 **Verified manually:** orbiting and zooming continuously from the mountain's
 base out to a whole-Earth view shows no z-fighting/flickering/swimming — the
 true-scale + log-depth-buffer approach holds at planetary scale.
+
+## What's been built so far (Milestone 3 — the tier system)
+
+The seamless multi-scale zoom — the project's load-bearing mechanism. Full
+details and **invariants** in [`docs/tier-system.md`](./tier-system.md).
+
+- `src/scale/constants.ts` — physical constants, the canonical-space math
+  (`canonScale`, `dc`↔meters), seam/fade thresholds, dolly limits, and
+  `latLonToUnitVector` (places Everest at its real coordinates: 27.986065,
+  86.922623).
+- `src/scale/store.ts` — the `ScaleManager` (zustand): `dc`, `tier`,
+  `transition`, HUD readouts.
+- `src/scene/Tier.tsx` — wraps a tier, applies its canonical scale, cross-fades
+  opacity at the seam.
+- `src/scene/Earth.tsx` — `EarthGlobe` reused by both tiers at their own scale.
+- `src/scene/SolarSystem.tsx` — Solar tier (1 unit = 1000 km): Earth-dot, Moon,
+  Sun at 1 AU.
+- `src/scene/ScaleTracker.tsx` — feeds the store from the live camera distance.
+- `src/ui/Hud.tsx` — tier / altitude / "1 px ≈ X km" overlay.
+- `src/scene/Scene.tsx` — two `<Tier>`s, one camera orbiting Earth's center,
+  **panning disabled** (invariant).
+- Added `zustand`.
+
+**Verified manually:** zooming out from Everest past ~25,000 km hands off
+Earth→Solar with no visible pop, and the round-trip back is smooth. Seam
+confirmed seamless.
 
 ## Suggested next milestones
 

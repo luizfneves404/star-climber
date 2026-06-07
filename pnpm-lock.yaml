@@ -23,6 +23,9 @@ importers:
       three:
         specifier: ^0.184.0
         version: 0.184.0
+      zustand:
+        specifier: ^5.0.14
+        version: 5.0.14(@types/react@19.2.17)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
     devDependencies:
       '@babel/core':
         specifier: ^7.29.0
