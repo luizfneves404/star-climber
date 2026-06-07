@@ -20,7 +20,7 @@ whole Earth is needed, and we explicitly want to avoid building multiple levels
 of detail (LOD). One true-scale local scene + one Earth sphere is the target
 architecture — see "Core technical decision" below.
 
-## Core technical decision: one true-scale coordinate space
+## Core technical decision for now: one true-scale coordinate space
 
 Early design discussion considered a "floating origin" / scaled-space approach
 (common in space games to deal with float precision at planetary scales) but
@@ -37,9 +37,11 @@ Early design discussion considered a "floating origin" / scaled-space approach
   the one non-negotiable setting — without it, rendering both nearby terrain and
   a 12,700km-wide planet in the same frame causes catastrophic z-fighting.
 
-This means: **no floating origin, no LOD hierarchy, no scaled space.** Just one
+This means: **no floating origin, no LOD hierarchy, no scaled space yet.** Just one
 real-meters coordinate system, origin at the mountain's base, Y-up, with a wide
 `near`/`far` camera range and the log depth buffer turned on.
+
+If necessary to continue the project, we can revisit this.
 
 ## Planned scene layout (from the original design discussion)
 
@@ -76,46 +78,31 @@ works. See `docs/superpowers/specs/2026-06-07-everest-milestone1-design.md` and
 away shows no z-fighting/flickering/swimming — the true-scale + log-depth-buffer
 approach is sound.
 
-## Gotchas hit during Milestone 1 (useful for next phases)
+## What's been built so far (Milestone 2)
 
-1. **Camera placement must respect true-scale geometry.** The first camera
-   position (`[0, 200, 600]`) put the camera *inside* the mountain's
-   10,000m-radius base, producing a screen full of a single shaded face with no
-   recognizable shape. True-scale scenes need camera distances that make sense
-   relative to object size — always sanity-check "is the camera outside the
-   thing it's looking at?" Final working position: `[0, 6000, 30000]` looking at
-   target `[0, 3000, 0]`.
+The Earth sphere — the next milestone suggested below, validating the
+highest remaining technical risk: rendering a ~10km mountain and a
+~12,742km planet together in one true-scale coordinate space. See
+`docs/superpowers/specs/2026-06-07-earth-sphere-design.md` and
+`docs/superpowers/plans/2026-06-07-earth-sphere.md` for the full spec/plan.
 
-2. **The Vite/React starter template's CSS actively fights a full-viewport 3D
-   canvas.** `#root` had a fixed `width: 1126px`, centered with
-   `border-inline: 1px solid var(--border)` — this clipped/offset the canvas and
-   showed up as two mysterious vertical lines on screen. We replaced all of
-   `index.css` with a minimal full-viewport reset (`#root { width: 100vw; height:
-   100vh }`, `body { margin: 0 }`, `:root { color-scheme: dark }`) and deleted
-   `App.css` and the starter's logo/hero/icon assets entirely (verify nothing
-   references a file before deleting — `grep -rl <name> src/ public/ index.html`).
+- `src/scene/Earth.tsx` — textured `SphereGeometry`, true Earth radius
+  (6,371,000m), 64x64 segments, positioned at `(0, -6371000, 0)` so its
+  surface meets the mountain's base at the world origin. Visual only, no
+  physics collider.
+- `public/textures/earth_daymap.jpg` — 2k Earth daymap texture (CC-BY 4.0,
+  Solar System Scope, obtained via Wikimedia Commons)
+- `src/scene/Scene.tsx` — now also renders `<Earth />` alongside `<Mountain />`
 
-3. **Faceted/"pyramid-like" appearance is normal low-poly shading, not a
-   precision bug.** `coneGeometry`'s third argument is the radial segment count
-   (currently `32`); a low count produces visible flat faces whose shading shifts
-   as you orbit relative to the light — this is ordinary per-face Lambertian
-   shading, not z-fighting or float jitter. Real precision artifacts look like
-   *flickering/swimming/popping geometry*, not just faceted shading. Bump the
-   segment count (e.g. 64–128) in `src/scene/Mountain.tsx` if a smoother
-   silhouette is wanted — purely cosmetic, not architectural.
-
-4. **No headless browser available in this environment** (sandbox blocks
-   installing Playwright/Chromium). Visual verification of R3F scenes currently
-   requires the human to open `pnpm dev`'s URL and look — factor this into how
-   you plan verification steps for visual milestones.
+**Verified manually:** orbiting and zooming continuously from the mountain's
+base out to a whole-Earth view shows no z-fighting/flickering/swimming — the
+true-scale + log-depth-buffer approach holds at planetary scale.
 
 ## Suggested next milestones
 
 Roughly in order of dependency:
 
-1. **Earth sphere** — add the textured `SphereGeometry` beneath the mountain;
-   validates the "look out and see the whole Earth" payoff visually before any
-   gameplay is built on top.
+1. ~~**Earth sphere**~~ — done, see Milestone 2 above.
 2. **Rapier physics + walkable character** — install `@react-three/rapier`, give
    the mountain a collider (heightfield or trimesh once it's not just a cone),
    and add a kinematic-capsule character controller for climbing.
