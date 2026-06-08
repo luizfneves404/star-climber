@@ -1,42 +1,53 @@
-import { Quaternion, Vector3 } from "three";
+import { MathUtils, Quaternion, type Vector3 } from "three";
 import { create } from "zustand";
-import {
-	EARTH_RADIUS_M,
-	EVEREST_HEIGHT_M,
-	EVEREST_LAT,
-	EVEREST_LON,
-	latLonToUnitVector,
-} from "../scale/constants";
+import { CONE_PEAK, PLAYER_START } from "../world/everestSite";
 
-const EYE_HEIGHT_M = 1.7;
-
-// Initial position: standing on Everest's summit, expressed in Earth-centered meters.
-const summitDir = new Vector3(...latLonToUnitVector(EVEREST_LAT, EVEREST_LON));
-const initialPosition = summitDir
-	.clone()
-	.multiplyScalar(EARTH_RADIUS_M + EVEREST_HEIGHT_M + EYE_HEIGHT_M);
-
-export const MIN_SPEED_MPS = 1; // m/s — slow enough to inspect the mountain
-export const MAX_SPEED_MPS = 1e9; // m/s — fast enough to cross to the Sun in minutes
+export const MIN_SPEED_MPS = 1; // m/s — slow enough to inspect the boxes
+export const MAX_SPEED_MPS = 1e20; // m/s — fast enough to reach the galaxy marker
 const INITIAL_SPEED_MPS = 5; // m/s — a brisk walk
+
+/** Derives yaw/pitch (radians, world +Y up, no roll) so a viewer at `from` faces `to`. */
+const lookAtAngles = (from: Vector3, to: Vector3) => {
+	const dir = to.clone().sub(from).normalize();
+	return {
+		yaw: Math.atan2(-dir.x, -dir.z),
+		pitch: Math.asin(MathUtils.clamp(dir.y, -1, 1)),
+	};
+};
+
+const initialAngles = lookAtAngles(PLAYER_START, CONE_PEAK);
 
 interface PlayerState {
 	/**
-	 * Position in meters, Earth-centered (float64). Mutated in place each frame.
-	 * The seam's source of truth — keep it Earth-centered (docs/tier-system.md #1).
+	 * Position in absolute Earth-centered meters (float64). Mutated in place each
+	 * frame. The floating-origin subtraction in FloatingGroup reads this as the
+	 * render origin, so the whole world is drawn relative to it.
 	 */
 	position: Vector3;
-	/** Camera orientation. Mutated in place each frame. */
+	/** Camera orientation. Mutated in place each frame from `yaw`/`pitch`. */
 	orientation: Quaternion;
+	/** Yaw (radians, world +Y up). Mutated in place by mouse-look each frame. */
+	yaw: number;
+	/** Pitch (radians, clamped to ±89°). Mutated in place by mouse-look each frame. */
+	pitch: number;
 	/** Movement speed in m/s, set by the player via the scroll wheel. */
 	speed: number;
 	/** Multiply speed by `factor` (>1 faster, <1 slower), clamped to the range. */
 	stepSpeed: (factor: number) => void;
+	/**
+	 * Jump to `position` (absolute meters). If `lookAt` is given, derives and
+	 * sets `yaw`/`pitch` so the player faces that point — `PlayerRig` rebuilds
+	 * `orientation` from them on the next frame, exactly as mouse-look does.
+	 * For driving the camera from outside the frame loop (see `src/debug/debugApi.ts`).
+	 */
+	teleport: (position: Vector3, lookAt?: Vector3) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
-	position: initialPosition,
+	position: PLAYER_START.clone(),
 	orientation: new Quaternion(),
+	yaw: initialAngles.yaw,
+	pitch: initialAngles.pitch,
 	speed: INITIAL_SPEED_MPS,
 	stepSpeed: (factor) =>
 		set({
@@ -45,4 +56,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 				Math.max(MIN_SPEED_MPS, get().speed * factor),
 			),
 		}),
+	teleport: (position, lookAt) => {
+		const next: Partial<PlayerState> = { position: position.clone() };
+		if (lookAt) {
+			const angles = lookAtAngles(position, lookAt);
+			next.yaw = angles.yaw;
+			next.pitch = angles.pitch;
+		}
+		set(next);
+	},
 }));

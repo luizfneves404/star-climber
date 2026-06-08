@@ -1,9 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef } from "react";
-import { Euler, MathUtils, PerspectiveCamera, Vector3 } from "three";
-import { dcToMeters } from "../scale/constants";
-import { useScaleStore } from "../scale/store";
-import { syncCameraToPlayer } from "./cameraBridge";
+import { Euler, MathUtils, Vector3 } from "three";
+import { useHudStore } from "../ui/hudStore";
 import { useFreeFlyControls } from "./freeFlyControls";
 import { usePlayerStore } from "./playerStore";
 
@@ -17,34 +14,34 @@ const move = new Vector3();
 const euler = new Euler(0, 0, 0, "YXZ");
 
 /**
- * Bridges the player's meter-space state to the canonical render camera and the
- * tier system. Yaw/pitch use Earth's +Y as "up" (no roll) — predictable for a
- * spike; mouse-look adjusts the initial framing.
+ * The only input integrator. Moves the player through absolute meter space and
+ * drives the camera. With floating origin the camera is pinned at render-space
+ * origin (0,0,0) — the world is drawn relative to the player position by
+ * FloatingGroup — so the rig only sets the camera's orientation.
+ * Yaw/pitch live in the player store (world +Y up, no roll) so external code
+ * (e.g. the debug teleport API) can drive look direction too; this rig is the
+ * only thing that advances them frame-to-frame via mouse-look.
  */
 export function PlayerRig() {
 	const camera = useThree((s) => s.camera);
 	const gl = useThree((s) => s.gl);
-	const height = useThree((s) => s.size.height);
 	const controls = useFreeFlyControls(gl.domElement);
-
-	const yaw = useRef(0);
-	const pitch = useRef(MathUtils.degToRad(-20)); // start looking slightly down the slope
 
 	useFrame((_, dt) => {
 		const player = usePlayerStore.getState();
 
 		// --- mouse-look ---
 		const look = controls.consumeLook();
-		yaw.current += look.yaw;
-		pitch.current = MathUtils.clamp(
-			pitch.current + look.pitch,
+		player.yaw += look.yaw;
+		player.pitch = MathUtils.clamp(
+			player.pitch + look.pitch,
 			-PITCH_LIMIT,
 			PITCH_LIMIT,
 		);
-		euler.set(pitch.current, yaw.current, 0);
+		euler.set(player.pitch, player.yaw, 0);
 		player.orientation.setFromEuler(euler);
 
-		// --- movement in meters ---
+		// --- movement in absolute meters (float64) ---
 		forward.set(0, 0, -1).applyQuaternion(player.orientation);
 		right.set(1, 0, 0).applyQuaternion(player.orientation);
 		move.set(0, 0, 0);
@@ -60,17 +57,12 @@ export function PlayerRig() {
 			player.position.addScaledVector(move, player.speed * dt);
 		}
 
-		// --- bridge: meters -> canonical render space ---
-		syncCameraToPlayer(camera, player.position, player.orientation);
+		// --- camera: pinned at render origin, orientation only (floating origin) ---
+		camera.position.set(0, 0, 0);
+		camera.quaternion.copy(player.orientation);
 
-		// --- drive the tier system (the single writer of dc) ---
-		const dc = camera.position.length();
-		const distanceMeters = dcToMeters(dc);
-		const fovRad = MathUtils.degToRad(
-			camera instanceof PerspectiveCamera ? camera.fov : 60,
-		);
-		const metersPerPixel = (distanceMeters * fovRad) / height;
-		useScaleStore.getState().update(dc, metersPerPixel);
+		// --- HUD readout ---
+		useHudStore.getState().update(player.position.length());
 	});
 
 	return null;
