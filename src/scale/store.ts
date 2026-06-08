@@ -1,3 +1,6 @@
+// The "ScaleManager": derives the active tier, cross-fade, and HUD readouts from
+// the camera's canonical distance `dc`. PlayerRig is the single writer of `dc`.
+// Full mechanism + invariants: docs/tier-system.md.
 import { create } from "zustand";
 import {
 	dcToMeters,

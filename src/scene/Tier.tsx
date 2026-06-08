@@ -16,6 +16,9 @@ interface TierProps {
 /**
  * Wraps a tier's content. Scales it into canonical space (Earth radius = 1) and
  * cross-fades its opacity around the seam so the active tier hands off smoothly.
+ *
+ * The `canonScale` normalization and the shared-Earth-at-the-seam rule are
+ * load-bearing invariants — see docs/tier-system.md (#2, #3) before changing this.
  */
 export function Tier({ id, metersPerUnit, children }: TierProps) {
 	const ref = useRef<Group>(null);

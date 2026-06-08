@@ -8,7 +8,11 @@ by accident — it rests on a few invariants. Breaking any of them brings back t
 visible jump/pop. **If you change the scale code, re-read this first.**
 
 Files: `src/scale/constants.ts`, `src/scale/store.ts`, `src/scene/Tier.tsx`,
-`src/scene/ScaleTracker.tsx`, `src/scene/Scene.tsx`.
+`src/scene/Scene.tsx`, and the player rig that now drives `dc`:
+`src/player/PlayerRig.tsx` (+ `cameraBridge.ts`, `freeFlyControls.ts`,
+`playerStore.ts`). The load-bearing invariants below are also echoed as short
+header comments in those modules — this doc is the full explanation, the
+comments are the in-context reminder that points back here.
 
 ## Why this exists (and why NOT one true-scale space)
 
@@ -45,15 +49,24 @@ cross-fade between two pixel-identical Earths is therefore invisible.
 - `Tier.tsx` cross-fades opacity over `dc ∈ [FADE_LO_DC, FADE_HI_DC] = [3, 6]`,
   driven by `store.transition` (a `smoothstep`). Below the window: pure Earth
   tier. Above: pure Solar tier. The inactive tier is hidden (`group.visible`).
-- `ScaleTracker.tsx` reads `dc = camera.position.length()` each frame and updates
-  the store (`tier`, `transition`, HUD readouts).
+- `PlayerRig.tsx` reads `dc = camera.position.length()` each frame and updates
+  the store (`tier`, `transition`, HUD readouts). It is the **single writer of
+  `dc`** — it folded in the old `ScaleTracker`, so input, camera, and the seam
+  all flow from one place.
 
 ## INVARIANTS — do not break these
 
-1. **Camera target stays at the origin; panning is disabled.**
-   `dc = camera.position.length()` assumes the target is Earth's center.
-   `enablePan` would move it, breaking the zoom limits *and* the handoff. (This
-   was a real bug: panning made it impossible to dolly closer than ~3000 km.)
+1. **`dc` is measured from Earth's center — keep the camera in Earth-centered
+   coordinates.** `dc = camera.position.length()` only means "distance from
+   Earth's center" because `cameraBridge.syncCameraToPlayer` places the camera at
+   the player's **Earth-centered** meter position scaled into canonical space
+   (`× 1/EARTH_RADIUS_M`); `playerStore.position` is the source of truth and is
+   Earth-centered. Anything that re-bases that origin away from Earth's center (a
+   floating-origin shift for physics, a pan, a "recenter on the player") breaks
+   both the dolly limits *and* the handoff. (This was a real bug under the old
+   orbit camera: enabling `OrbitControls` panning moved the target and made it
+   impossible to dolly closer than ~3000 km. The free-fly rig has no pan, but the
+   same invariant holds — don't move the origin off Earth's center.)
 2. **Both tiers draw an identical Earth at the seam** — same `EARTH_RADIUS_M`,
    same texture (`earth_daymap.jpg`), same center (tier origin), same
    orientation. If you change Earth in one tier, change it in both, or the seam
@@ -129,7 +142,8 @@ one-per-tier. In open space it isn't needed at all.
 
 ## Manual verification (no automated test covers this)
 
-Zoom out from Everest past ~25,000 km: HUD flips `Earth → Solar System`, Earth
-shrinks into the solar scene (Moon, then Sun) **with no pop**. Zoom back in:
-smooth return, mountain reappears. Watch the HUD `(handoff %)` during the seam —
-there must be no visible jump or double-Earth.
+Free-fly out from Everest past ~25,000 km (click the canvas to capture the mouse,
+scroll to raise speed, fly straight up): HUD flips `Earth → Solar System`, Earth
+shrinks into the solar scene (Moon, then Sun) **with no pop**. Fly back in: smooth
+return, mountain and ground boxes reappear crisp. Watch the HUD `(handoff %)`
+during the seam — there must be no visible jump or double-Earth.

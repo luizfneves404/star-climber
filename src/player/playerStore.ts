@@ -21,7 +21,10 @@ export const MAX_SPEED_MPS = 1e9; // m/s — fast enough to cross to the Sun in 
 const INITIAL_SPEED_MPS = 5; // m/s — a brisk walk
 
 interface PlayerState {
-	/** Position in meters, Earth-centered (float64). Mutated in place each frame. */
+	/**
+	 * Position in meters, Earth-centered (float64). Mutated in place each frame.
+	 * The seam's source of truth — keep it Earth-centered (docs/tier-system.md #1).
+	 */
 	position: Vector3;
 	/** Camera orientation. Mutated in place each frame. */
 	orientation: Quaternion;

@@ -42,10 +42,20 @@ that before touching any scale/zoom/camera code.** In short:
 - The Earth↔Solar handoff is built and the seam is **verified seamless**.
 
 The "world origin at the mountain base" idea from the old plan is gone — the
-origin is now **Earth's center**, the camera orbits it, and **panning is disabled**
-(panning breaks the seam math — see the invariants doc).
+origin is now **Earth's center**. A free-fly player camera (Milestone 4) moves
+through Earth-centered meter space and drives the zoom; there is no orbit camera
+and no panning. `dc` is simply the camera's distance from Earth's center, so
+re-basing that origin would break the seam math — see the invariants doc.
 
 ## Planned scene layout (from the original design discussion)
+
+> **Partly superseded.** This is the *original* sketch. The coordinate decisions
+> below (origin at the mountain base, Earth centered at `(0,-6371000,0)`) were
+> replaced by the tier system: the origin is **Earth's center**, Earth sits at the
+> tier origin, and Everest is placed at its **real lat/lon** on the sphere via
+> `latLonToUnitVector` (see `src/scene/Mountain.tsx`). The non-coordinate ideas
+> here (meadow/trees, physics collider, climb/flight modes) are still unbuilt and
+> still roughly the plan.
 
 - **Origin `(0,0,0)`** = base of Everest
 - **Everest**: true-scale mesh (~8,849m tall) with a physics collider
@@ -71,7 +81,8 @@ works. See `docs/superpowers/specs/2026-06-07-everest-milestone1-design.md` and
   radius 10000m, positioned with its base circle at y=0
 - `src/scene/Scene.tsx` — the `<Canvas>` (with `near: 0.1`, `far: 5e7`,
   `logarithmicDepthBuffer: true`), lighting, the mountain, and drei's
-  `<OrbitControls>`
+  `<OrbitControls>` *(OrbitControls later replaced by the free-fly `PlayerRig` in
+  Milestone 4; Scene is now a two-layer setup — see below)*
 - `src/App.tsx` — now just renders `<Scene />`
 - Removed all of the Vite/React starter template's UI, CSS, and assets (they
   conflicted with a full-viewport 3D canvas — see gotchas below)
@@ -117,34 +128,86 @@ details and **invariants** in [`docs/tier-system.md`](./tier-system.md).
 - `src/scene/SolarSystem.tsx` — Solar tier (1 unit = 1000 km): Earth-dot, Moon,
   Sun at 1 AU.
 - `src/scene/ScaleTracker.tsx` — feeds the store from the live camera distance.
+  *(Removed in Milestone 4 — its job moved into `PlayerRig`, the single writer
+  of `dc`.)*
 - `src/ui/Hud.tsx` — tier / altitude / "1 px ≈ X km" overlay.
 - `src/scene/Scene.tsx` — two `<Tier>`s, one camera orbiting Earth's center,
-  **panning disabled** (invariant).
+  **panning disabled** (invariant). *(The orbit camera was replaced by the
+  free-fly `PlayerRig` in Milestone 4.)*
 - Added `zustand`.
 
 **Verified manually:** zooming out from Everest past ~25,000 km hands off
 Earth→Solar with no visible pop, and the round-trip back is smooth. Seam
 confirmed seamless.
 
+## What's been built so far (Milestone 4 — free-fly player bridge)
+
+The orbit camera is gone; you now **fly the scene yourself** in real meters. This
+spike de-risked the eventual physics player by proving its hardest sub-problem in
+isolation: a free, meter-space camera — decoupled from the Earth-center orbit the
+tier system was built around — still drives the seamless tier swap. Physics
+(Rapier), gravity, and collision are deliberately **out of scope** (a separate,
+more-known risk). See `docs/superpowers/specs/2026-06-07-free-fly-player-bridge-design.md`
+and `docs/superpowers/plans/2026-06-07-free-fly-player-bridge.md`.
+
+- `src/player/playerStore.ts` — the **source of truth**: player `position`
+  (Earth-centered meters, float64 — the representation Rapier plugs into later)
+  and `orientation`, both mutated in place each frame, plus a manual `speed`
+  (m/s) set by the scroll wheel. Starts on Everest's summit at its real lat/lon.
+- `src/player/freeFlyControls.ts` — input hook: pointer-lock mouse-look (click to
+  capture, Esc releases), WASD/QE (+Space/Ctrl) movement, wheel = multiplicative
+  speed. Exposes `isDown`/`consumeLook`; all mutable input lives in a ref, never
+  touched during render.
+- `src/player/PlayerRig.tsx` — the bridge and the **single writer of `dc`**.
+  Integrates input → moves the player in meters → converts to canonical render
+  space → updates the scale store. Folds in the old `ScaleTracker`.
+- `src/player/cameraBridge.ts` — the one meters→canonical conversion
+  (`syncCameraToPlayer`, `× 1/EARTH_RADIUS_M`), shared by both render layers so
+  their cameras stay pose-locked.
+- `src/player/NearRig.tsx` — mirrors the player pose onto the near layer's camera;
+  integrates **no** input (single source of truth stays in `PlayerRig`).
+- `src/scene/Scene.tsx` — now **two stacked `<Canvas>` layers** (far: logdepth,
+  owns input, holds the tiers; near: normal depth, transparent, human-scale
+  `Ground` only). This two-layer split — and why one depth buffer can't span both
+  human and astronomical scale — is documented in `docs/tier-system.md`.
+- `src/scene/Ground.tsx` — human-scale reference platform + 2 m boxes at the
+  summit (near layer), so any sub-meter float jitter is immediately visible.
+- `src/ui/Hud.tsx` — gained a **speed** readout.
+
+**Verified manually:** standing among the summit boxes renders crisp with a
+~0.05 m near plane (no jitter); flying straight up past ~25,000 km swaps
+Earth→Solar seamlessly even though a free camera (not an orbit) drives it; the
+round-trip back lands you on the summit with no near/far clipping pops.
+
 ## Suggested next milestones
 
 Roughly in order of dependency:
 
 1. ~~**Earth sphere**~~ — done, see Milestone 2 above.
-2. **Rapier physics + walkable character** — install `@react-three/rapier`, give
+2. ~~**Free-fly player camera in meter space**~~ — done, see Milestone 4 above.
+3. **Rapier physics + walkable character** — install `@react-three/rapier`, give
    the mountain a collider (heightfield or trimesh once it's not just a cone),
-   and add a kinematic-capsule character controller for climbing.
-3. **Mode-switching state machine** — zustand store toggling between "climb"
-   (physics-driven) and "flight" (camera-driven free-fly), triggered at the summit.
-4. **Replace the placeholder cone** with a real heightmap-based Everest mesh
+   and add a kinematic-capsule character controller for climbing. Plugs into
+   `playerStore`'s meter-space `position`. This is also where **explicit
+   floating-origin re-basing** lands (a Rapier need, deferred from Milestone 4) —
+   mind invariant #1 in `docs/tier-system.md`: the origin must stay Earth-centered
+   for `dc` to hold.
+4. **Mode-switching state machine** — zustand store toggling between "climb"
+   (physics-driven) and "flight" (the existing camera-driven free-fly), triggered
+   at the summit.
+5. **Replace the placeholder cone** with a real heightmap-based Everest mesh
    once the surrounding architecture (physics, camera, modes) is proven out.
 
 ## Useful repo context
 
-- Stack: Vite + React 19 + TypeScript, package manager `pnpm`
+- Stack: Vite + React 19 + TypeScript, package manager `pnpm`. State via
+  `zustand` (scale store + player store).
 - 3D stack added in Milestone 1: `three`, `@react-three/fiber`,
-  `@react-three/drei` (Rapier not yet installed)
+  `@react-three/drei` (Rapier not yet installed — it arrives with the physics
+  milestone). `drei`'s `OrbitControls` was used through Milestone 3 and dropped in
+  Milestone 4 for the free-fly `PlayerRig`.
 - No automated test suite exists (`pnpm build` / `pnpm lint` are the available
-  sanity checks; visual work needs manual verification — see gotcha #4)
-- Git repo was initialized as part of Milestone 1 (it didn't exist before);
-  all work so far is directly on `master`
+  sanity checks; the scale/seam behavior cannot be unit-tested and needs manual
+  browser verification — see `docs/tier-system.md`)
+- Git repo was initialized as part of Milestone 1. Early work was on `master`;
+  later milestones use feature branches (e.g. `feat/free-fly-player-bridge`).
