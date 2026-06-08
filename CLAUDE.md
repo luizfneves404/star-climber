@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## What this is
 
@@ -60,20 +60,40 @@ canvas for human-scale geometry only.
 ### State flow (everything is absolute meters internally)
 
 - `src/player/playerStore.ts` — Zustand. The player's `position` (Vector3,
-  absolute Earth-centered **meters**, float64) and `orientation` (Quaternion),
-  both **mutated in place** each frame, plus free-fly `speed`. This `position` is
-  the render origin. Initial pose is on Everest's summit at its real lat/lon.
-- `src/player/PlayerRig.tsx` — the only input integrator. Mouse-look + WASD/QE
-  movement (meters), pins the camera at the origin, copies orientation, writes
-  the HUD readout.
+  absolute Earth-centered **meters**, float64), `orientation` (Quaternion), and
+  `yaw`/`pitch` (radians), all **mutated in place** each frame, plus free-fly
+  `speed`. This `position` is the render origin. Initial pose is beside the
+  Everest cone (from `everestSite`), facing the peak. Exposes a `teleport(position,
+  lookAt?)` action — copies position and, if `lookAt` is given, derives `yaw`/`pitch`
+  so the player faces it; `PlayerRig` rebuilds `orientation` from them next frame.
+  This is what the debug API drives (see "Debug navigation" below).
+- `src/player/PlayerRig.tsx` — the only per-frame input integrator. Consumes
+  mouse-look + WASD/QE/Space/Ctrl movement, advances `yaw`/`pitch` and `position`
+  in the store, pins the camera at the origin, copies orientation, writes the HUD
+  readout.
+- `src/player/freeFlyControls.ts` — `useFreeFlyControls` hook: wires pointer-lock
+  mouse-look, movement keys, and scroll-wheel speed to the canvas. Owns raw input
+  in a ref; `PlayerRig` reads it via `isDown`/`consumeLook` without touching it
+  during render.
 - `src/world/FloatingGroup.tsx` — the camera-relative transform; every marker
   wraps itself in one.
-- `src/world/Markers.tsx` — minimal true-scale test content (summit boxes, Earth,
-  Moon, Sun, a star, a galaxy marker).
+- `src/world/everestSite.ts` — **shared** geometry for the Everest site: the
+  local frame at Everest's lat/lon (`up`/`tangent`/`binormal`, `surfaceQuat`,
+  `groundQuat`) and the named layout points (`CONE_CENTER`, `CONE_PEAK`,
+  `PLAYER_START`, `BOX_CLUSTER_ORIGIN`, …), all absolute meters. Both
+  `playerStore` and `Markers`/`Mountain` import from here so the anchor math
+  isn't duplicated — change site geometry here, not in those consumers.
+- `src/world/Markers.tsx` — minimal true-scale test content (summit boxes, ground
+  plane, Earth, Moon, Sun, a star, a galaxy marker).
+- `src/world/Mountain.tsx` — the true-scale Everest cone, anchored on the ground
+  at `CONE_CENTER` with its peak at `CONE_PEAK`.
 - `src/world/constants.ts` — physical constants, render `NEAR_M`/`FAR_M`, and
   `latLonToUnitVector` (places things at real lat/lon).
-- `src/ui/hudStore.ts` — per-frame HUD readout (distance from center), written by
-  `PlayerRig`.
+- `src/scene/Scene.tsx` — the single `<Canvas>` (log depth), lights, and mounts
+  `Markers`, `PlayerRig`, and the debug API (`useDebugApi`).
+- `src/debug/debugApi.ts` — installs `window.__debug` (see "Debug navigation").
+- `src/ui/hudStore.ts` / `src/ui/Hud.tsx` — per-frame HUD readout (distance from
+  center), written by `PlayerRig`.
 
 ## Conventions / gotchas
 
@@ -83,6 +103,53 @@ canvas for human-scale geometry only.
 - TypeScript is strict-ish: `noUnusedLocals`/`noUnusedParameters` and `verbatimModuleSyntax` (use `import type` for type-only imports) are enforced — a build will fail on these.
 - The Earth texture (`public/textures/earth_daymap.jpg`) is CC-BY 4.0 and **requires attribution** — see `ATTRIBUTION.md` before swapping or modifying it.
 
+## Controls
+
+Click the canvas to capture the pointer (pointer-lock mouse-look). **WASD** move
+horizontally relative to view, **E/Space** up and **Q/Ctrl** down, **scroll wheel**
+adjusts free-fly speed (multiplicative, clamped `MIN_SPEED_MPS`…`MAX_SPEED_MPS` — the
+range spans walking pace to fast enough to reach the galaxy marker). All movement is
+in absolute meters; `Esc` releases the pointer.
+
+## Debug navigation (`window.__debug`) & Playwright
+
+Driving the camera by scripting WASD/mouse-look is painful, so the app installs a
+small navigation API on `window.__debug` (`src/debug/debugApi.ts`, mounted by
+`useDebugApi()` in `Scene`). It lets external tools jump the camera to precomputed
+landmark positions:
+
+- `__debug.teleport(position, lookAt?)` — `position`/`lookAt` are
+  `[x, y, z]` tuples in **absolute Earth-centered meters**; calls straight into the
+  store's `teleport` action.
+- `__debug.viewpoints` — precomputed tuples for key landmarks
+  (`conePeak`, `coneBase`, `playerStart`, `boxCluster`, `earthCenter`, `moon`,
+  `sun`), built from the same `everestSite`/`constants` values the scene uses, so
+  callers never recompute geometry.
+- `__debug.earthRadiusM` — handy for offsetting a viewpoint (e.g. `earthCenter` plus
+  a surface radius).
+
+When adding a new landmark worth jumping to, extend `VIEWPOINTS` in
+`debugApi.ts` rather than hardcoding coordinates in test scripts.
+
+**Playwright MCP** is the intended way to verify scale/camera changes without a
+human at the keyboard. Run `pnpm dev` (Vite serves on `http://localhost:5173`),
+then use the Playwright MCP browser tools to navigate there and call the API via
+`browser_evaluate`, e.g.:
+
+```js
+() => {
+  const { teleport, viewpoints } = window.__debug;
+  teleport(viewpoints.coneBase, viewpoints.conePeak); // stand at the base, look up
+}
+```
+
+Then `browser_take_screenshot` to inspect the result. This is how you check the
+cone sits flush, the boxes stay crisp, bodies look right at each scale, etc. Note
+the canvas is WebGL — DOM snapshots tell you nothing about the render; use
+screenshots.
+
 ## Verifying changes
 
-For any change touching scale, camera, or rendering, run the app and manually verify continuity: free-fly outward from the Everest summit boxes (1 cm apart — must stay crisp, no z-fight/jitter) all the way out past Earth, Moon, Sun, and the outer markers. There must be **no pop anywhere** (there are no tiers) and no surface swimming on the body you approach. See the checklist in `docs/floating-origin-spike.md`. No automated check covers this.
+For any change touching scale, camera, or rendering, run the app and verify continuity: free-fly outward from the Everest summit boxes (1 cm apart — must stay crisp, no z-fight/jitter), past the true-scale cone (base flush on the ground, no floating geometry), all the way out past Earth, Moon, Sun, and the outer markers. There must be **no pop anywhere** (there are no tiers) and no surface swimming on the body you approach. See the checklist in `docs/floating-origin-spike.md`. No automated check covers this.
+
+You don't have to fly there by hand — prefer the Playwright MCP + `window.__debug` workflow above to teleport between viewpoints and screenshot each scale. `pnpm build` and `pnpm lint` remain the only static checks.
