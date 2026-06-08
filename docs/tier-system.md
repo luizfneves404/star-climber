@@ -1,4 +1,17 @@
-# The Tier System — read before touching the zoom/scale code
+# The Tier System — SUPERSEDED
+
+> **⚠️ Superseded (Milestone 5).** The tier system described below has been
+> removed from the codebase and replaced by the floating-origin approach — see
+> **[`docs/floating-origin-spike.md`](./floating-origin-spike.md)**. The canonical
+> `Earth radius = 1` normalization, discrete tiers, opacity cross-fade, and the
+> two-canvas split are all gone. This document is kept only as a record of the
+> earlier design and the reasoning that motivated the pivot. The files it
+> references (`Tier.tsx`, `scale/store.ts`, `scale/constants.ts`, `cameraBridge.ts`,
+> `NearRig.tsx`) no longer exist.
+
+---
+
+# The Tier System — (historical) read before touching the zoom/scale code
 
 This is the load-bearing mechanism of Star Climber: a **seamless zoom across
 orders of magnitude** by handing off between discrete, individually-normalized

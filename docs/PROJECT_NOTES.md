@@ -20,15 +20,23 @@ whole Earth is needed, and we explicitly want to avoid building multiple levels
 of detail (LOD). One true-scale local scene + one Earth sphere is the target
 architecture — see "Core technical decision" below.
 
-## Core technical decision: discrete normalized tiers (SUPERSEDES the old single-space plan)
+## Core technical decision: floating origin (SUPERSEDES the tier system)
 
-> **Pivot (Milestone 3).** An earlier version of this section argued for **one
-> true-scale meter coordinate space, no scaled space**. That was correct for
-> *Earth alone*, but it provably cannot reach the outer tiers (solar system →
-> galaxy → universe spans ~27 orders of magnitude; float32 holds ~7). We have
-> **deliberately pivoted** to a discrete, individually-normalized **tier system**
-> with a seamless cross-fade handoff between tiers. **Do not "simplify" back to a
-> single coordinate space.**
+> **Pivot (Milestone 5).** The tier system below has been **removed** and
+> replaced by **floating origin + logarithmic depth over one continuous scene**
+> — the standard approach for multi-scale space rendering. The tier system
+> reached Earth↔Solar but its single Earth-radius normalization provably blows
+> float32 at galaxy scale, and it required a two-canvas hack. Floating origin
+> renders in meters with the camera pinned at the origin and the world drawn
+> relative to the player (`absolute − origin`, in float64, per object). See
+> **[`docs/floating-origin-spike.md`](./floating-origin-spike.md)**. The rest of
+> this section (about the tier system) is **historical**.
+
+> **Pivot (Milestone 3) — now itself superseded.** An even earlier version
+> argued for **one true-scale meter coordinate space**. That was correct for
+> *Earth alone* but can't reach the outer scales, which motivated the tier
+> system. Floating origin (Milestone 5) is the actual general solution: a single
+> coordinate space *is* fine, as long as you render it camera-relative.
 
 The mechanism is the heart of the project and is documented in full — with its
 load-bearing invariants — in **[`docs/tier-system.md`](./tier-system.md). Read
@@ -179,24 +187,54 @@ and `docs/superpowers/plans/2026-06-07-free-fly-player-bridge.md`.
 Earth→Solar seamlessly even though a free camera (not an orbit) drives it; the
 round-trip back lands you on the summit with no near/far clipping pops.
 
+## What's been built so far (Milestone 5 — floating-origin spike)
+
+The tier system was **removed** and replaced by floating origin — a hard reset to
+de-risk the standard multi-scale approach in isolation, deleting everything
+specific to the old way (canonical normalization, `Tier.tsx`, the scale store,
+`cameraBridge`, `NearRig`, the two-canvas split, the textured tier content). The
+old code lives only in git history; revert if the spike fails. Full design and
+the open question in [`docs/floating-origin-spike.md`](./floating-origin-spike.md).
+
+- `src/world/constants.ts` — physical constants, `latLonToUnitVector`, render
+  `NEAR_M`/`FAR_M`, outer marker distances.
+- `src/world/FloatingGroup.tsx` — the camera-relative transform
+  (`renderPos = absolute − playerPosition`, float64, per frame).
+- `src/world/Markers.tsx` — minimal true-scale test content spanning the
+  magnitude range: 2 m summit canary boxes 1 cm apart, Earth, Moon, Sun at 1 AU,
+  a star at ~4 ly, a galaxy marker at ~2.6e20 m. No textures, no LOD.
+- `src/player/PlayerRig.tsx` — rewritten: moves the player in absolute meters,
+  pins the camera at render origin (orientation only), writes the HUD readout.
+  `playerStore.ts` trimmed; `freeFlyControls.ts` reused unchanged.
+- `src/scene/Scene.tsx` — a **single** log-depth `<Canvas>` (the explicit
+  single-canvas hypothesis). `src/ui/Hud.tsx` + `hudStore.ts` — trimmed overlay.
+
+**Status:** builds and lints clean. The single-canvas hypothesis (does one
+log-depth canvas resolve the 1 cm summit boxes *and* the Sun at 1 AU?) is **not
+yet manually verified** — run `pnpm dev` and complete the checklist in the spike
+doc, then record the result there.
+
 ## Suggested next milestones
 
 Roughly in order of dependency:
 
-1. ~~**Earth sphere**~~ — done, see Milestone 2 above.
+0. **Verify the single-canvas hypothesis** (Milestone 5) — the immediate gate;
+   see the checklist in `docs/floating-origin-spike.md` and record the result.
+   If it fails, add back a second normal-depth canvas for human-scale geometry.
+1. ~~**Earth sphere**~~ — done, see Milestone 2 above (content; removed in M5).
 2. ~~**Free-fly player camera in meter space**~~ — done, see Milestone 4 above.
-3. **Rapier physics + walkable character** — install `@react-three/rapier`, give
-   the mountain a collider (heightfield or trimesh once it's not just a cone),
-   and add a kinematic-capsule character controller for climbing. Plugs into
-   `playerStore`'s meter-space `position`. This is also where **explicit
-   floating-origin re-basing** lands (a Rapier need, deferred from Milestone 4) —
-   mind invariant #1 in `docs/tier-system.md`: the origin must stay Earth-centered
-   for `dc` to hold.
-4. **Mode-switching state machine** — zustand store toggling between "climb"
-   (physics-driven) and "flight" (the existing camera-driven free-fly), triggered
-   at the summit.
-5. **Replace the placeholder cone** with a real heightmap-based Everest mesh
-   once the surrounding architecture (physics, camera, modes) is proven out.
+3. **Re-add content on the floating-origin base** — bring back the textured
+   Earth, the mountain mesh, and the solar bodies as `FloatingGroup`s (the spike
+   deliberately stripped them). Watch out: Rapier physics will want a *local*
+   reference frame near the player, which floating origin already provides — the
+   player position is the origin, so the simulation stays small-numbered near
+   whatever body you're standing on.
+4. **Rapier physics + walkable character** — install `@react-three/rapier`, give
+   the mountain a collider, add a kinematic-capsule controller. Plugs into
+   `playerStore`'s meter-space `position`.
+5. **Mode-switching state machine** — toggle between "climb" (physics) and
+   "flight" (free-fly), triggered at the summit.
+6. **Replace the placeholder geometry** with a real heightmap-based Everest mesh.
 
 ## Useful repo context
 

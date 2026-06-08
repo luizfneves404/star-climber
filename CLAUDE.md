@@ -21,37 +21,68 @@ There is **no automated test suite**. The scale/seam behavior cannot be unit-tes
 
 Two docs are load-bearing and must be read before touching the relevant code:
 
-- **`docs/tier-system.md`** — the seamless-zoom mechanism and its **invariants**. Read before changing anything in `src/scale/` or `src/scene/`. Breaking an invariant reintroduces the visible "pop" at the tier handoff.
+- **`docs/floating-origin-spike.md`** — the current scale mechanism (floating
+  origin + log depth) and the open question it is de-risking. Read before
+  changing anything in `src/world/`, `src/player/`, or `src/scene/`.
 - **`docs/PROJECT_NOTES.md`** — project intent, milestone history, and planned next steps.
 
-Note: both docs predate the current player code and still reference `ScaleTracker.tsx` and Drei `OrbitControls`. Those were replaced by the free-fly player rig — `src/player/PlayerRig.tsx` now writes the scale store and `src/player/freeFlyControls.ts` owns input. The *concepts* in the docs (canonical space, seam, two-layer rendering, invariants) remain accurate; the named files do not.
+Note: `docs/tier-system.md` describes the **superseded** approach (canonical
+normalization, discrete tiers, opacity cross-fade, two canvases). It was removed
+in Milestone 5; the doc is kept only as a historical record.
 
-### The two big ideas
+### The big idea: floating origin (camera-relative rendering)
 
-**1. Canonical tier space (`Earth radius = 1`).** Each scene "tier" is authored in convenient units and declares `metersPerUnit`. `Tier.tsx` scales it by `canonScale = metersPerUnit / EARTH_RADIUS_M`, mapping *every* tier's Earth onto a unit sphere. Consequence: the camera's canonical distance `dc = camera.position.length()` maps to the same real distance-from-Earth-center in every tier, so **one camera drives all tiers** and adjacent tiers draw an identical Earth at the seam — making the cross-fade invisible.
-- Earth tier: `metersPerUnit = 1`. Solar tier: `metersPerUnit = 1e6` (1 unit = 1000 km).
-- The seam is at `SEAM_M = 2.5e7` m (~25,000 km); `Tier.tsx` cross-fades opacity over `dc ∈ [FADE_LO_DC, FADE_HI_DC]` driven by `store.transition`.
+The whole world is authored and simulated in **absolute Earth-centered meters
+(float64)**. Rendering is in **meters**, with the camera pinned at render-space
+origin `(0,0,0)` — only its orientation changes. Every object is drawn
+camera-relative:
 
-**2. Two stacked `<Canvas>` layers** (`Scene.tsx`), because `logarithmicDepthBuffer` is a *global* renderer flag and no single depth buffer is precise across both human and astronomical scale:
-- **FAR layer** — `logarithmicDepthBuffer: true`, opaque. Holds the tiers (Earth, mountain, solar system). `PlayerRig` lives here and is the **single source of truth**: it integrates input, drives the camera, and writes `dc`/tier/HUD readouts to the scale store.
-- **NEAR layer** — normal depth, transparent, `pointerEvents: "none"` (so the far canvas owns input). Holds only human-scale local geometry (`Ground`) — surfaces centimeters apart that logdepth cannot resolve in canonical units. `NearRig` merely **mirrors** the player pose; it never integrates input.
+```
+renderPosition = absolutePositionMeters − playerPositionMeters
+```
 
-### State flow (everything is meters internally)
+This subtraction happens **in JS (float64), per object, every frame**
+(`src/world/FloatingGroup.tsx`), and the small result is assigned to the object's
+local position. **Crucially, it must not** be expressed as one large translation
+on a shared parent group — that bakes the huge offset into a float32 matrix and
+destroys precision before the GPU subtracts. Doing the subtract at float64 first
+is the point: near-camera objects come out at ~meters (precise), far ones huge
+but sub-pixel (imprecision invisible). One continuous scene, no tiers, no
+cross-fade, no normalization.
 
-- `src/player/playerStore.ts` — Zustand. The player's `position` (Vector3, Earth-centered **meters**, float64) and `orientation` (Quaternion), both **mutated in place** each frame, plus free-fly `speed`. Initial pose is on Everest's summit at its real lat/lon.
-- `src/player/PlayerRig.tsx` — the only input integrator. Mouse-look + WASD/QE movement (meters), then `syncCameraToPlayer` converts meters → canonical render space, then it writes the scale store.
-- `src/player/cameraBridge.ts` — the single meters→canonical conversion (`× 1/EARTH_RADIUS_M`), shared by both layers so the cameras stay pose-locked.
-- `src/scale/store.ts` — Zustand `ScaleManager`: derives `tier`, `transition`, distance, and `metersPerPixel` from `dc`. Read by `Tier.tsx` and the HUD.
-- `src/scale/constants.ts` — physical constants, `canonScale`, `dc`↔meters helpers, seam/fade/dolly thresholds, and `latLonToUnitVector` (places things at real lat/lon, aligned to the daymap UVs).
+**Single canvas (under test).** There is currently **one** `<Canvas>` with
+`logarithmicDepthBuffer: true`. The open hypothesis (see the spike doc) is that,
+because we render in meters, one log-depth canvas resolves both 1 cm-apart summit
+boxes and the Sun at 1 AU — making the old two-canvas split unnecessary. If the
+close boxes z-fight in practice, the documented fallback is a second normal-depth
+canvas for human-scale geometry only.
+
+### State flow (everything is absolute meters internally)
+
+- `src/player/playerStore.ts` — Zustand. The player's `position` (Vector3,
+  absolute Earth-centered **meters**, float64) and `orientation` (Quaternion),
+  both **mutated in place** each frame, plus free-fly `speed`. This `position` is
+  the render origin. Initial pose is on Everest's summit at its real lat/lon.
+- `src/player/PlayerRig.tsx` — the only input integrator. Mouse-look + WASD/QE
+  movement (meters), pins the camera at the origin, copies orientation, writes
+  the HUD readout.
+- `src/world/FloatingGroup.tsx` — the camera-relative transform; every marker
+  wraps itself in one.
+- `src/world/Markers.tsx` — minimal true-scale test content (summit boxes, Earth,
+  Moon, Sun, a star, a galaxy marker).
+- `src/world/constants.ts` — physical constants, render `NEAR_M`/`FAR_M`, and
+  `latLonToUnitVector` (places things at real lat/lon).
+- `src/ui/hudStore.ts` — per-frame HUD readout (distance from center), written by
+  `PlayerRig`.
 
 ## Conventions / gotchas
 
-- **Per-frame allocation is avoided** in hot loops — `PlayerRig` and `cameraBridge` reuse module-level scratch `Vector3`/`Euler` objects and mutate store vectors in place. Follow that pattern; don't allocate Three.js objects inside `useFrame`.
-- **The scale-store invariants** in `docs/tier-system.md` are real: keep the camera target at the origin (panning is disabled by design), keep both tiers' Earth identical at the seam, keep `logarithmicDepthBuffer` on the far layer, and never render more than ~2 adjacent tiers at once.
+- **Per-frame allocation is avoided** in hot loops — `PlayerRig` and `FloatingGroup` reuse module-level scratch objects and mutate vectors in place (e.g. `group.position.subVectors(...)`). Follow that pattern; don't allocate Three.js objects inside `useFrame`.
+- **The floating-origin rule** (docs/floating-origin-spike.md) is load-bearing: the `absolute − origin` subtraction must stay per-object in float64 (`FloatingGroup`), never folded into a large parent-group translation. Keep `logarithmicDepthBuffer` on, and keep the camera pinned at the render origin.
 - **React Compiler is on** (`babel-plugin-react-compiler` via `vite.config.ts`). Don't hand-add `useMemo`/`useCallback` for things it already handles; do keep components free of the manual-memo anti-patterns it forbids.
 - TypeScript is strict-ish: `noUnusedLocals`/`noUnusedParameters` and `verbatimModuleSyntax` (use `import type` for type-only imports) are enforced — a build will fail on these.
 - The Earth texture (`public/textures/earth_daymap.jpg`) is CC-BY 4.0 and **requires attribution** — see `ATTRIBUTION.md` before swapping or modifying it.
 
 ## Verifying changes
 
-For any change touching scale, camera, or rendering, run the app and manually verify the seam: free-fly outward from Everest past ~25,000 km — the HUD must flip `Earth → Solar System` with **no visible pop or double-Earth** during the handoff (`transition` 0→1), and the return trip must be smooth. No automated check covers this.
+For any change touching scale, camera, or rendering, run the app and manually verify continuity: free-fly outward from the Everest summit boxes (1 cm apart — must stay crisp, no z-fight/jitter) all the way out past Earth, Moon, Sun, and the outer markers. There must be **no pop anywhere** (there are no tiers) and no surface swimming on the body you approach. See the checklist in `docs/floating-origin-spike.md`. No automated check covers this.
