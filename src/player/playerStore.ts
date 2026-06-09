@@ -1,4 +1,4 @@
-import { MathUtils, Quaternion, type Vector3 } from "three";
+import { Euler, MathUtils, Quaternion, type Vector3 } from "three";
 import { create } from "zustand";
 import { CONE_PEAK, PLAYER_START } from "../world/everestSite";
 
@@ -16,6 +16,9 @@ const lookAtAngles = (from: Vector3, to: Vector3) => {
 };
 
 const initialAngles = lookAtAngles(PLAYER_START, CONE_PEAK);
+const initialOrientation = new Quaternion().setFromEuler(
+	new Euler(initialAngles.pitch, initialAngles.yaw, 0, "YXZ"),
+);
 
 interface PlayerState {
 	/**
@@ -45,7 +48,7 @@ interface PlayerState {
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
 	position: PLAYER_START.clone(),
-	orientation: new Quaternion(),
+	orientation: initialOrientation.clone(),
 	yaw: initialAngles.yaw,
 	pitch: initialAngles.pitch,
 	speed: INITIAL_SPEED_MPS,
@@ -62,6 +65,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 			const angles = lookAtAngles(position, lookAt);
 			next.yaw = angles.yaw;
 			next.pitch = angles.pitch;
+			next.orientation = new Quaternion().setFromEuler(
+				new Euler(angles.pitch, angles.yaw, 0, "YXZ"),
+			);
 		}
 		set(next);
 	},

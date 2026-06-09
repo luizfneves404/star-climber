@@ -1,26 +1,30 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { Euler, MathUtils, Vector3 } from "three";
+import { Quaternion, Vector3 } from "three";
 import { useHudStore } from "../ui/hudStore";
 import { useFreeFlyControls } from "./freeFlyControls";
 import { usePlayerStore } from "./playerStore";
 
-const PITCH_LIMIT = MathUtils.degToRad(89);
-
 // Scratch objects reused every frame to avoid allocation.
 const forward = new Vector3();
 const right = new Vector3();
-const worldUp = new Vector3(0, 1, 0);
+const camUp = new Vector3();
 const move = new Vector3();
-const euler = new Euler(0, 0, 0, "YXZ");
+const scratchQ = new Quaternion();
+const LOCAL_Y = new Vector3(0, 1, 0);
+const LOCAL_X = new Vector3(1, 0, 0);
+const LOCAL_NEG_Z = new Vector3(0, 0, -1);
 
 /**
  * The only input integrator. Moves the player through absolute meter space and
  * drives the camera. With floating origin the camera is pinned at render-space
  * origin (0,0,0) — the world is drawn relative to the player position by
  * FloatingGroup — so the rig only sets the camera's orientation.
- * Yaw/pitch live in the player store (world +Y up, no roll) so external code
- * (e.g. the debug teleport API) can drive look direction too; this rig is the
- * only thing that advances them frame-to-frame via mouse-look.
+ *
+ * Orientation is maintained as a quaternion incremented each frame via local-space
+ * rotations (no euler decomposition, no world-up assumption). Roll accumulates
+ * only when R is held during mouse X movement.
+ *
+ * Up/down movement (Space / Shift) is relative to the camera's current orientation.
  */
 export function PlayerRig() {
 	const camera = useThree((s) => s.camera);
@@ -30,28 +34,36 @@ export function PlayerRig() {
 	useFrame((_, dt) => {
 		const player = usePlayerStore.getState();
 
-		// --- mouse-look ---
+		// --- mouse-look: incremental local-space rotations ---
 		const look = controls.consumeLook();
-		player.yaw += look.yaw;
-		player.pitch = MathUtils.clamp(
-			player.pitch + look.pitch,
-			-PITCH_LIMIT,
-			PITCH_LIMIT,
-		);
-		euler.set(player.pitch, player.yaw, 0);
-		player.orientation.setFromEuler(euler);
+		if (look.yaw !== 0) {
+			scratchQ.setFromAxisAngle(LOCAL_Y, look.yaw);
+			player.orientation.multiply(scratchQ);
+		}
+		if (look.pitch !== 0) {
+			scratchQ.setFromAxisAngle(LOCAL_X, look.pitch);
+			player.orientation.multiply(scratchQ);
+		}
+		if (look.roll !== 0) {
+			scratchQ.setFromAxisAngle(LOCAL_NEG_Z, look.roll);
+			player.orientation.multiply(scratchQ);
+		}
+		if (look.yaw !== 0 || look.pitch !== 0 || look.roll !== 0) {
+			player.orientation.normalize();
+		}
 
 		// --- movement in absolute meters (float64) ---
 		forward.set(0, 0, -1).applyQuaternion(player.orientation);
 		right.set(1, 0, 0).applyQuaternion(player.orientation);
+		camUp.set(0, 1, 0).applyQuaternion(player.orientation);
 		move.set(0, 0, 0);
 		if (controls.isDown("KeyW")) move.add(forward);
 		if (controls.isDown("KeyS")) move.sub(forward);
 		if (controls.isDown("KeyD")) move.add(right);
 		if (controls.isDown("KeyA")) move.sub(right);
-		if (controls.isDown("KeyE") || controls.isDown("Space")) move.add(worldUp);
-		if (controls.isDown("KeyQ") || controls.isDown("ControlLeft"))
-			move.sub(worldUp);
+		if (controls.isDown("Space")) move.add(camUp);
+		if (controls.isDown("ShiftLeft") || controls.isDown("ShiftRight"))
+			move.sub(camUp);
 		if (move.lengthSq() > 0) {
 			move.normalize();
 			player.position.addScaledVector(move, player.speed * dt);

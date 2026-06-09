@@ -10,8 +10,9 @@ export interface FreeFlyControls {
 	/**
 	 * Returns the mouse-look delta (radians) accumulated since the last call and
 	 * resets it. Lets PlayerRig consume input without mutating hook-owned state.
+	 * Roll accumulates only when R is held during mouse movement.
 	 */
-	consumeLook: () => { yaw: number; pitch: number };
+	consumeLook: () => { yaw: number; pitch: number; roll: number };
 }
 
 /**
@@ -23,16 +24,17 @@ export interface FreeFlyControls {
 export function useFreeFlyControls(
 	domElement: HTMLElement | null,
 ): FreeFlyControls {
-	const state = useRef({ keys: new Set<string>(), yaw: 0, pitch: 0 });
+	const state = useRef({ keys: new Set<string>(), yaw: 0, pitch: 0, roll: 0 });
 
 	// Created once; methods close over the ref and read it only when invoked.
 	const [api] = useState<FreeFlyControls>(() => ({
 		isDown: (code) => state.current.keys.has(code),
 		consumeLook: () => {
 			const s = state.current;
-			const delta = { yaw: s.yaw, pitch: s.pitch };
+			const delta = { yaw: s.yaw, pitch: s.pitch, roll: s.roll };
 			s.yaw = 0;
 			s.pitch = 0;
+			s.roll = 0;
 			return delta;
 		},
 	}));
@@ -47,8 +49,12 @@ export function useFreeFlyControls(
 		const onClick = () => domElement.requestPointerLock();
 		const onMouseMove = (e: MouseEvent) => {
 			if (document.pointerLockElement !== domElement) return;
-			s.yaw -= e.movementX * LOOK_SENSITIVITY;
-			s.pitch -= e.movementY * LOOK_SENSITIVITY;
+			if (s.keys.has("KeyR")) {
+				s.roll -= e.movementX * LOOK_SENSITIVITY;
+			} else {
+				s.yaw -= e.movementX * LOOK_SENSITIVITY;
+				s.pitch -= e.movementY * LOOK_SENSITIVITY;
+			}
 		};
 		const onWheel = (e: WheelEvent) => {
 			e.preventDefault();
