@@ -25,7 +25,7 @@ renderPosition = absolutePositionMeters − playerPositionMeters
 
 This subtraction happens **in JS (float64), per object, every frame** (`src/world/FloatingGroup.tsx`). **It must not** be expressed as one large translation on a shared parent group — that bakes the huge offset into a float32 matrix and loses precision before the GPU sees it. The float64 subtract is the whole point. One continuous scene, no tiers, no cross-fade.
 
-The single `<Canvas>` uses `logarithmicDepthBuffer: true`. This has been verified: one log-depth canvas in meters resolves both 1 cm-apart summit boxes and the Sun at 1 AU simultaneously with no z-fighting.
+The single `<Canvas>` uses `logarithmicDepthBuffer: true`. This has been verified: one log-depth canvas in meters resolves both 1 cm-apart summit boxes and the Sun at 1 AU simultaneously with no z-fighting. There seems to be a bit jagged edges on the boxes, but i find it acceptable.
 
 ## File map
 
@@ -72,9 +72,4 @@ When adding a new landmark, extend `VIEWPOINTS` in `debugApi.ts`.
 
 ## Current state & what's next
 
-The floating-origin base is verified and clean (Milestone 5). The scene currently holds minimal placeholder content (untextured cone, colored marker spheres). Next work in rough order:
-
-1. **Re-add rich content** — textured Earth sphere, solar bodies, as `FloatingGroup`s.
-2. **Rapier physics + walkable character** — `@react-three/rapier`, mountain collider, kinematic-capsule controller plugging into `playerStore`'s meter-space `position`.
-3. **Mode-switching** — "climb" (physics on, gravity) ↔ "flight" (free-fly), triggered at the summit.
-4. **Replace placeholder cone** with a heightmap-based Everest mesh.
+see README.

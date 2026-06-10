@@ -50,7 +50,7 @@ const STAR_MARKER_R = 5e9;
 const GALAXY_MARKER_R = 1e19;
 
 function EarthMesh() {
-	const texture = useTexture("/textures/earth_daymap.jpg");
+	const texture = useTexture("/textures/8k_earth_daymap.jpg");
 	return (
 		<mesh>
 			<sphereGeometry args={[EARTH_RADIUS_M, 64, 64]} />

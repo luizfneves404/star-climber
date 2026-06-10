@@ -36,7 +36,7 @@ One new component, `src/scene/Earth.tsx`, mirroring the existing
 
 ## Texture Asset
 
-- File: `Solarsystemscope_texture_2k_earth_daymap.jpg` (2048×1024), licensed
+- File: `Solarsystemscope_texture_8k_earth_daymap.jpg` (2048×1024), licensed
   CC-BY 4.0 by Solar System Scope (solarsystemscope.com/textures), obtained via
   Wikimedia Commons
 - Saved to `public/textures/earth_daymap.jpg`

@@ -24,12 +24,12 @@
 Run: `file public/textures/earth_daymap.jpg`
 Expected output contains: `JPEG image data` and `2048x1024`
 
-(This file was fetched from Wikimedia Commons — `Solarsystemscope_texture_2k_earth_daymap.jpg`, CC-BY 4.0 Solar System Scope — and committed alongside the design spec. This step just confirms it survived and is the expected asset before building on top of it.)
+(This file was fetched from Wikimedia Commons — `Solarsystemscope_texture_8k_earth_daymap.jpg`, CC-BY 4.0 Solar System Scope — and committed alongside the design spec. This step just confirms it survived and is the expected asset before building on top of it.)
 
 If the file is missing, fetch it with:
 ```bash
 mkdir -p public/textures
-curl -sL "https://commons.wikimedia.org/wiki/Special:FilePath/Solarsystemscope_texture_2k_earth_daymap.jpg" -o public/textures/earth_daymap.jpg
+curl -sL "https://commons.wikimedia.org/wiki/Special:FilePath/Solarsystemscope_texture_8k_earth_daymap.jpg" -o public/textures/earth_daymap.jpg
 ```
 
 ## Task 2: Create the Earth component

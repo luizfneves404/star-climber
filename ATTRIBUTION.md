@@ -6,10 +6,10 @@ This project uses the following third-party assets under their respective licens
 
 **File:** `public/textures/earth_daymap.jpg`
 
-- **Title:** Solarsystemscope Texture 2k Earth Daymap
+- **Title:** Solarsystemscope Texture 8k Earth Daymap
 - **Creator:** [Solar System Scope](https://www.solarsystemscope.com/)
 - **License:** [CC-BY 4.0 (Creative Commons Attribution 4.0 International)](https://creativecommons.org/licenses/by/4.0/)
-- **Source:** [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_earth_daymap.jpg)
+- **Source:** [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_8k_earth_daymap.jpg)
 - **Modifications:** None. Texture is used as-is, applied via `@react-three/drei`'s `useTexture` to a `MeshStandardMaterial` in the `Earth` component.
 
 ### CC-BY 4.0 Compliance
