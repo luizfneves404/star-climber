@@ -69,8 +69,8 @@ Replace the placeholder cone with a real-data Everest:
 - **Not doing**: curvature, LOD, runtime height queries (`heightAt`). The
   player start and landmarks stay on the flat ground beside the massif.
 
-`Mountain.tsx` becomes the DEM mesh component; `everestSite.ts` layout points
-are unchanged.
+`Mountain.tsx` becomes the DEM mesh component; `everestSite.ts` keeps the same
+layout-point structure (cone-era names become `TERRAIN_CENTER`/`SUMMIT`).
 
 ## Milestone 3: Ground landmarks
 
