@@ -11,8 +11,8 @@ import { fromArrayBuffer } from "geotiff";
 
 // Keep in sync with EVEREST_LAT/LON in src/world/constants.ts and
 // TERRAIN_SIZE_M / TERRAIN_GRID in src/world/{constants,everestTerrain}.ts.
-const EVEREST_LAT = 27.986065;
-const EVEREST_LON = 86.922623;
+const EVEREST_LAT = 27.988056;
+const EVEREST_LON = 86.925278;
 const SIZE_M = 30_000;
 const GRID = 513;
 

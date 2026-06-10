@@ -9,8 +9,8 @@ export const AU_M = 149_597_870_700;
 
 export const EVEREST_HEIGHT_M = 8849;
 export const EVEREST_BASE_RADIUS_M = 10_000;
-export const EVEREST_LAT = 27.986065;
-export const EVEREST_LON = 86.922623;
+export const EVEREST_LAT = 27.988056;
+export const EVEREST_LON = 86.925278;
 
 // Outer test markers — the point is the magnitude spread, not realism.
 const LIGHT_YEAR_M = 9.461e15;
