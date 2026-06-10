@@ -9,16 +9,9 @@ import {
 	STAR_DIST_M,
 	SUN_RADIUS_M,
 } from "./constants";
-import {
-	BOX_CLUSTER_ORIGIN,
-	GROUND_SIZE_M,
-	groundAnchor,
-	groundQuat,
-	surfaceQuat,
-	tangent,
-	up,
-} from "./everestSite";
+import { BOX_CLUSTER_ORIGIN, surfaceQuat, tangent, up } from "./everestSite";
 import { FloatingGroup } from "./FloatingGroup";
+import { Ground } from "./Ground";
 import { Mountain } from "./Mountain";
 
 // --- Summit canary frame (the single-canvas z-fight test) ---
@@ -73,13 +66,8 @@ function Box({ position }: { position: Vector3 }) {
 export function Markers() {
 	return (
 		<>
-			{/* Flat ground plane tangent to Earth at Everest's true lat/lon (sea level) — large enough to hold the cone and the player/box area beside it */}
-			<FloatingGroup absolute={groundAnchor}>
-				<mesh quaternion={groundQuat}>
-					<planeGeometry args={[GROUND_SIZE_M, GROUND_SIZE_M]} />
-					<meshStandardMaterial color="#7a7060" />
-				</mesh>
-			</FloatingGroup>
+			{/* Flat textured ground plane tangent to Earth at Everest's true lat/lon (sea level) */}
+			<Ground />
 
 			{/* True-scale Everest cone, base on the ground at groundAnchor, peak at true height */}
 			<Mountain />
