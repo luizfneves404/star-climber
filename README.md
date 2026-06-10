@@ -13,22 +13,16 @@ Star Climber renders:
 
 ## Current state & what's next
 
-The floating-origin base is verified and clean (Milestone 5). The scene currently holds minimal placeholder content. Next work in rough order:
+The floating-origin base is verified and clean (Milestone 5). The scene currently holds minimal placeholder content. The approach for every upcoming item is decided — see `docs/superpowers/specs/2026-06-10-content-roadmap-design.md` for the full design. Build order (each step independently shippable):
 
-1. **Replace placeholder cone** with a heightmap-based Everest mesh.
-2. textured ground to give the sense of height when flying up. with a solid color, everything looks the same from 1 km up.
-3. **Add more landmarks to the ground close to everest**: burj khalifa, normal building, human, blue whale, etc.
-4. **Add rich content to space** — Solar system bodies. stars. galaxies. superclusters. real data as much as possible. perhaps break this step down. how to make it look good from a distance? are stars going to subside into void, or form a coherent cloud? do i need to artifically draw a cloud to mimic the galaxy feel? what problems to rendering billions of stars at the same time? LOD necessary? need to ground this in objective tests, FPS, etc.
-5. **Better HUD** — show important bodies with a marker on the HUD, with distance. perhaps toggle to show or not show each of them.
-6. **Quick movement** - cool "move to" landmark. moves in a smooth way to show the target, or to a specific position, like "above the galaxy"
+1. **Textured ground** — tiling texture on the existing flat plane (material-only change).
+2. **Everest DEM mesh** — real Copernicus GLO-30 heightmap, ~512² displaced grid, diorama-style edge feathering onto the flat plane, elevation-based vertex colors. No LOD, no curvature.
+3. **Ground landmarks** — size-comparison exhibit near the player start: boxes for generic structures, primitive-stack Burj Khalifa, CC0 glTF human and blue whale.
+4. **Space content** — layered point clouds: textured solar-system spheres, HYG star catalog (~120k real stars, one `Points` cloud), an artificial particle-cloud Milky Way it dissolves into, and a real galaxy catalog beyond. Distance-driven opacity fades, no tiers, FPS measured per layer via a `__debug` frame-time probe.
+5. **HUD markers** — projected labels + distance for in-view bodies, side panel with toggles for all of them.
+6. **Fly-to** — log-distance glide (equal time per order of magnitude) to auto-derived or hand-authored viewpoints, cancelled by any movement input.
 
-Decouple content from logic!!! logic works perfect, adding content should not mess logic.
-
-I tried to add physics for the first part, but there is a trade off:
-- Use rapier, and accept complexity + limiting physics to the first part only
-- Hand code the kinematics, since its just platforms and stuff. possible, tried it, but wasn't that fun. in the end, flying around is already pretty fun.
-
-Decided against adding any physics.
+Content stays decoupled from logic the boring way: plain data arrays mapped in ordinary JSX, components split by domain as they grow. A generic content registry was considered and rejected (JSX already is the declarative content format). Physics was also considered and rejected — flying around is already the fun part.
 
 
 ## Building and Running
