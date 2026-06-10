@@ -23,7 +23,7 @@ export const up = new Vector3(...latLonToUnitVector(EVEREST_LAT, EVEREST_LON));
  * Ground anchor: the sea-level point at Everest's true lat/lon. This is where
  * the flat ground plane is tangent to the sphere AND where the terrain
  * patch's center sits — the summit ends up at true height directly above
- * this point (the old "summit" coordinate is now derived, not anchored).
+ * this point.
  */
 export const groundAnchor = up.clone().multiplyScalar(EARTH_RADIUS_M);
 
