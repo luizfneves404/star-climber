@@ -31,6 +31,15 @@ export function PlayerRig() {
 	const gl = useThree((s) => s.gl);
 	const controls = useFreeFlyControls(gl.domElement);
 
+	// Priority -1: must run before every FloatingGroup's useFrame (default
+	// priority 0). FloatingGroup subscriptions are sorted by priority with a
+	// stable sort, so equal-priority order = mount order — and Mountain
+	// subscribes late (its FloatingGroup mounts only after its heightmap fetch
+	// resolves). Without this, Mountain would read this frame's *new*
+	// player.position while Ground (mounted synchronously, subscribed first)
+	// reads the *old* one, offsetting Mountain from Ground by this frame's
+	// movement delta — visible as the terrain sinking/rising relative to the
+	// ground plane while flying, proportional to speed.
 	useFrame((_, dt) => {
 		const player = usePlayerStore.getState();
 
@@ -75,7 +84,7 @@ export function PlayerRig() {
 
 		// --- HUD readout ---
 		useHudStore.getState().update(player.position.length());
-	});
+	}, -1);
 
 	return null;
 }

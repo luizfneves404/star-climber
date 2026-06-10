@@ -12,6 +12,7 @@ import {
 import { BOX_CLUSTER_ORIGIN, surfaceQuat, tangent, up } from "./everestSite";
 import { FloatingGroup } from "./FloatingGroup";
 import { Ground } from "./Ground";
+import { Landmarks } from "./Landmarks";
 import { Mountain } from "./Mountain";
 
 // --- Summit canary frame (the single-canvas z-fight test) ---
@@ -71,6 +72,9 @@ export function Markers() {
 
 			{/* True-scale Everest terrain patch, anchored at groundAnchor, summit at true height */}
 			<Mountain />
+
+			{/* Size-comparison exhibit: human → bus → whale → building → Burj Khalifa */}
+			<Landmarks />
 
 			{/* Canary boxes: 2 m cubes, 1 cm apart, sitting on the ground beside the terrain patch */}
 			<Box position={BOX_A} />

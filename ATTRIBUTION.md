@@ -43,6 +43,20 @@ This texture is provided under the Creative Commons Attribution 4.0 Internationa
 - **Credit:** Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the European Union and ESA; all rights reserved.
 - **Modifications:** Clipped to ~30×30 km around the Everest summit, resampled to a 513×513 uint16 grid (meters above sea level).
 
+## Ground Landmark Exhibit
+
+**Component:** `src/world/Landmarks.tsx`
+
+All objects in the size-comparison exhibit are procedurally generated geometry (Three.js `BoxGeometry`). No third-party models are used yet.
+
+The **human** and **blue whale** entries are intentional box stand-ins. The design calls for replacing them with CC0 low-poly glTF models. Suitable sources:
+
+- [Quaternius](https://quaternius.com/) — CC0 game-ready asset packs (characters, animals)
+- [Kenney](https://kenney.nl/assets) — CC0 3-D asset packs
+- [Poly Haven](https://polyhaven.com/models) — CC0 photorealistic 3-D models
+
+When a model is added, record it here: title, creator, license, source URL, and any modifications (e.g. scale, material changes).
+
 ---
 
 For more information about this project's use of third-party assets, see the license file or documentation.

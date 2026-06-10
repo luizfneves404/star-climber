@@ -12,6 +12,7 @@ import {
 	SUMMIT,
 	TERRAIN_CENTER,
 } from "../world/everestSite";
+import { LANDMARKS_LOOK_AT, LANDMARKS_VIEWPOINT } from "../world/landmarksData";
 
 type Vec3Tuple = [number, number, number];
 
@@ -23,6 +24,10 @@ const VIEWPOINTS = {
 	terrainCenter: toTuple(TERRAIN_CENTER),
 	playerStart: toTuple(PLAYER_START),
 	boxCluster: toTuple(BOX_CLUSTER_ORIGIN),
+	/** Stand 300 m in front of the landmark exhibit; look toward the Burj Khalifa. */
+	landmarkExhibit: toTuple(LANDMARKS_VIEWPOINT),
+	/** Look-at target to pair with landmarkExhibit — the Burj Khalifa at 100 m height. */
+	landmarkExhibitLookAt: toTuple(LANDMARKS_LOOK_AT),
 	earthCenter: [0, 0, 0] as Vec3Tuple,
 	moon: [MOON_DIST_M, 0, 0] as Vec3Tuple,
 	sun: [AU_M, 0, 0] as Vec3Tuple,
