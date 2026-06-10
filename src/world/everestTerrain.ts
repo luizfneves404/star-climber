@@ -50,10 +50,11 @@ export function buildTerrainGeometry(
 			positions[i * 3] = x;
 			positions[i * 3 + 1] = h * feather;
 			positions[i * 3 + 2] = z;
+			// Color from the rendered (feathered) height so the flattened skirt reads as rock, not snow.
 			color.lerpColors(
 				ROCK,
 				SNOW,
-				smoothstep(SNOW_LINE_LOW_M, SNOW_LINE_HIGH_M, h),
+				smoothstep(SNOW_LINE_LOW_M, SNOW_LINE_HIGH_M, h * feather),
 			);
 			colors[i * 3] = color.r;
 			colors[i * 3 + 1] = color.g;
