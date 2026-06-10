@@ -12,6 +12,9 @@ export const EVEREST_BASE_RADIUS_M = 10_000;
 export const EVEREST_LAT = 27.988056;
 export const EVEREST_LON = 86.925278;
 
+/** Side length of the square DEM terrain patch centered on the summit. Must match scripts/build-everest-heightmap.mjs. */
+export const TERRAIN_SIZE_M = 30_000;
+
 // Outer test markers — the point is the magnitude spread, not realism.
 const LIGHT_YEAR_M = 9.461e15;
 export const STAR_DIST_M = 4.0 * LIGHT_YEAR_M; // ~Proxima, ~3.8e16 m
