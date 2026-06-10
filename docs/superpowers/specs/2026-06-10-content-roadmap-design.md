@@ -48,17 +48,22 @@ larger scale and multiplying. A material-only change — no new logic.
 Replace the placeholder cone with a real-data Everest:
 
 - **Data**: clip ~30×30 km of Copernicus GLO-30 (30 m DEM; better Himalaya
-  coverage than SRTM) around the summit into a 16-bit PNG heightmap. One-time
-  offline step (OpenTopography download or a small GDAL script kept in the
-  repo); the PNG lives in `public/`.
+  coverage than SRTM) around the summit into a raw 16-bit binary heightmap
+  (`.bin`, not PNG — browser canvas decodes PNG at 8 bits, so a raw uint16
+  buffer is needed for exact meter values). One-time offline step
+  (OpenTopography download or a small GDAL script kept in the repo); the
+  `.bin` file lives in `public/`.
 - **Mesh**: at load, displace a flat ~512² grid (~500 k tris) by the
   heightmap. Flat, not curved — it sits on the flat ground plane like the
   cone does today.
 - **Diorama edge treatment**: real terrain around Everest sits at 4–5 km
   elevation, so a raw patch on a sea-level plane has 4 km cliffs at its
-  edges. Subtract the base elevation and feather patch borders to zero so the
-  massif rises out of the flat ground like a museum model, true-scale summit
-  height preserved.
+  edges. Heights stay true elevation above the sea-level ground plane (the
+  plane being sea level is geographically honest, and the summit lands at its
+  real height); only the patch borders feather to zero so the massif rises
+  out of the flat ground like a museum model. Site clearance moves to 17.5 km
+  east of the patch center so the player/box area clears the 15 km patch
+  half-extent.
 - **Coloring**: elevation-based vertex colors (snow above ~6,000 m, rock
   below). No satellite imagery, no custom shaders.
 - **Not doing**: curvature, LOD, runtime height queries (`heightAt`). The

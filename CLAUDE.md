@@ -30,9 +30,11 @@ The single `<Canvas>` uses `logarithmicDepthBuffer: true`. This has been verifie
 ## File map
 
 - `src/world/FloatingGroup.tsx` — camera-relative transform; every scene object wraps itself in one.
-- `src/world/everestSite.ts` — **shared source of truth** for the Everest site: the local frame at Everest's lat/lon, and named layout points (`CONE_CENTER`, `CONE_PEAK`, `PLAYER_START`, `BOX_CLUSTER_ORIGIN`, …), all in absolute meters. `playerStore` and `Markers`/`Mountain` import from here — change site geometry here, not in consumers.
+- `src/world/everestSite.ts` — **shared source of truth** for the Everest site: the local frame at Everest's lat/lon, and named layout points (`TERRAIN_CENTER`, `SUMMIT`, `PLAYER_START`, `BOX_CLUSTER_ORIGIN`, …), all in absolute meters. `playerStore` and `Markers`/`Mountain` import from here — change site geometry here, not in consumers.
 - `src/world/Markers.tsx` — true-scale test content (summit boxes, Earth, Moon, Sun, star, galaxy marker).
-- `src/world/Mountain.tsx` — true-scale Everest cone, anchored at `CONE_CENTER` with peak at `CONE_PEAK`.
+- `src/world/everestTerrain.ts` — builds the Everest diorama `BufferGeometry` (513×513 grid, elevation vertex colors, edge feathering) from `public/terrain/everest_heightmap.bin`, generated offline by `scripts/build-everest-heightmap.mjs` (rerun via `pnpm build:heightmap`).
+- `src/world/Mountain.tsx` — true-scale Everest terrain from the Copernicus GLO-30 heightmap, diorama-style borders feathered into the flat ground plane, anchored at `groundAnchor`.
+- `src/world/Ground.tsx` — textured sea-level ground plane (60 km flat plane, tiling CC0 rock texture).
 - `src/world/constants.ts` — physical constants, `NEAR_M`/`FAR_M`, `latLonToUnitVector`.
 - `src/player/playerStore.ts` — Zustand. Player `position` (absolute Earth-centered meters, float64), `orientation` (Quaternion), `yaw`/`pitch`, and free-fly `speed`. Exposes `teleport(position, lookAt?)`.
 - `src/player/PlayerRig.tsx` — sole per-frame input integrator. Advances `yaw`/`pitch`/`position`, pins the camera at origin, writes the HUD.
@@ -46,7 +48,7 @@ The single `<Canvas>` uses `logarithmicDepthBuffer: true`. This has been verifie
 - **No per-frame allocation** in hot paths. `PlayerRig` and `FloatingGroup` reuse module-level scratch objects and mutate in place (e.g. `group.position.subVectors(...)`). Don't allocate Three.js objects inside `useFrame`.
 - **React Compiler is on** (`babel-plugin-react-compiler` via `vite.config.ts`). Don't add `useMemo`/`useCallback` manually for things it already handles.
 - **TypeScript strictness**: `noUnusedLocals`, `noUnusedParameters`, and `verbatimModuleSyntax` are enforced — use `import type` for type-only imports, or the build will fail.
-- The Earth texture (`public/textures/earth_daymap.jpg`) is CC-BY 4.0 — see `ATTRIBUTION.md` before swapping it.
+- The Earth texture (`public/textures/earth_daymap.jpg`) is CC-BY 4.0 — see `ATTRIBUTION.md` before swapping it. The CC0 ground texture (`public/textures/rocky_trail_diff_2k.jpg`) and the Copernicus GLO-30 heightmap data are also covered there.
 
 ## Debug navigation (`window.__debug`)
 
@@ -57,7 +59,7 @@ Run `pnpm dev`, then via Playwright MCP `browser_evaluate`:
 ```js
 () => {
   const { teleport, viewpoints } = window.__debug;
-  teleport(viewpoints.coneBase, viewpoints.conePeak); // stand at base, look up
+  teleport(viewpoints.terrainCenter, viewpoints.summit); // stand at the terrain patch center, look up at the summit
 }
 ```
 
@@ -65,7 +67,7 @@ Then `browser_take_screenshot` to inspect. The canvas is WebGL — DOM snapshots
 
 Available on `window.__debug`:
 - `teleport(position, lookAt?)` — `[x,y,z]` tuples in absolute Earth-centered meters.
-- `viewpoints` — precomputed landmarks: `conePeak`, `coneBase`, `playerStart`, `boxCluster`, `earthCenter`, `moon`, `sun`.
+- `viewpoints` — precomputed landmarks: `summit`, `terrainCenter`, `playerStart`, `boxCluster`, `earthCenter`, `moon`, `sun`.
 - `earthRadiusM` — useful for offsetting a surface viewpoint.
 
 When adding a new landmark, extend `VIEWPOINTS` in `debugApi.ts`.
