@@ -1,6 +1,6 @@
 import { Euler, MathUtils, Quaternion, type Vector3 } from "three";
 import { create } from "zustand";
-import { CONE_PEAK, PLAYER_START } from "../world/everestSite";
+import { PLAYER_START, SUMMIT } from "../world/everestSite";
 
 export const MIN_SPEED_MPS = 1; // m/s — slow enough to inspect the boxes
 export const MAX_SPEED_MPS = 1e20; // m/s — fast enough to reach the galaxy marker
@@ -15,7 +15,7 @@ const lookAtAngles = (from: Vector3, to: Vector3) => {
 	};
 };
 
-const initialAngles = lookAtAngles(PLAYER_START, CONE_PEAK);
+const initialAngles = lookAtAngles(PLAYER_START, SUMMIT);
 const initialOrientation = new Quaternion().setFromEuler(
 	new Euler(initialAngles.pitch, initialAngles.yaw, 0, "YXZ"),
 );

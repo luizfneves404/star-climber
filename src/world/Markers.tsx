@@ -15,9 +15,9 @@ import { Ground } from "./Ground";
 import { Mountain } from "./Mountain";
 
 // --- Summit canary frame (the single-canvas z-fight test) ---
-// A cluster of ~2 m boxes a centimeter apart, beside the Everest cone, so we
-// can check that one log-depth canvas keeps them crisp while the Sun is in
-// frame at 1 AU. See docs/floating-origin-spike.md.
+// A cluster of ~2 m boxes a centimeter apart, beside the Everest terrain
+// patch, so we can check that one log-depth canvas keeps them crisp while
+// the Sun is in frame at 1 AU. See docs/floating-origin-spike.md.
 const boxAt = (alongUp: number, alongTangentAxis: number) =>
 	BOX_CLUSTER_ORIGIN.clone()
 		.addScaledVector(up, alongUp)
@@ -69,10 +69,10 @@ export function Markers() {
 			{/* Flat textured ground plane tangent to Earth at Everest's true lat/lon (sea level) */}
 			<Ground />
 
-			{/* True-scale Everest cone, base on the ground at groundAnchor, peak at true height */}
+			{/* True-scale Everest terrain patch, anchored at groundAnchor, summit at true height */}
 			<Mountain />
 
-			{/* Canary boxes: 2 m cubes, 1 cm apart, sitting on the ground beside the cone */}
+			{/* Canary boxes: 2 m cubes, 1 cm apart, sitting on the ground beside the terrain patch */}
 			<Box position={BOX_A} />
 			<Box position={BOX_B} />
 			<Box position={BOX_C} />

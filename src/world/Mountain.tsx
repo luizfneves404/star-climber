@@ -1,20 +1,31 @@
-import { EVEREST_BASE_RADIUS_M, EVEREST_HEIGHT_M } from "./constants";
-import { CONE_CENTER, surfaceQuat, up } from "./everestSite";
+import { useEffect, useState } from "react";
+import type { BufferGeometry } from "three";
+import { groundAnchor, surfaceQuat } from "./everestSite";
+import { loadEverestTerrainGeometry } from "./everestTerrain";
 import { FloatingGroup } from "./FloatingGroup";
 
-// Placeholder Everest cone: true height (8,849 m), base radius 10 km
-// (slope ≈ 41°). ConeGeometry is centered on its own origin, so the
-// FloatingGroup is anchored at the cone's vertical midpoint — half its
-// height above the ground — putting its base flat on the ground and its
-// peak at true height above CONE_CENTER.
-const CONE_MID = CONE_CENTER.clone().addScaledVector(up, EVEREST_HEIGHT_M / 2);
-
+/**
+ * True-scale Everest from Copernicus GLO-30 data, diorama style: a 30 km
+ * displaced grid anchored at the sea-level ground anchor, summit at true
+ * 8,849 m, borders feathered into the flat ground plane. Renders nothing
+ * until the heightmap fetch resolves (~526 KB).
+ */
 export function Mountain() {
+	const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
+	useEffect(() => {
+		let cancelled = false;
+		loadEverestTerrainGeometry().then((g) => {
+			if (!cancelled) setGeometry(g);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+	if (!geometry) return null;
 	return (
-		<FloatingGroup absolute={CONE_MID}>
-			<mesh quaternion={surfaceQuat}>
-				<coneGeometry args={[EVEREST_BASE_RADIUS_M, EVEREST_HEIGHT_M, 32]} />
-				<meshStandardMaterial color="#8a8378" />
+		<FloatingGroup absolute={groundAnchor}>
+			<mesh quaternion={surfaceQuat} geometry={geometry}>
+				<meshStandardMaterial vertexColors />
 			</mesh>
 		</FloatingGroup>
 	);

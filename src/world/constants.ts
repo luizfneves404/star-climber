@@ -8,7 +8,6 @@ export const MOON_DIST_M = 384_400_000;
 export const AU_M = 149_597_870_700;
 
 export const EVEREST_HEIGHT_M = 8849;
-export const EVEREST_BASE_RADIUS_M = 10_000;
 export const EVEREST_LAT = 27.988056;
 export const EVEREST_LON = 86.925278;
 

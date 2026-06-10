@@ -8,9 +8,9 @@ import { usePlayerStore } from "../player/playerStore";
 import { AU_M, EARTH_RADIUS_M, MOON_DIST_M } from "../world/constants";
 import {
 	BOX_CLUSTER_ORIGIN,
-	CONE_CENTER,
-	CONE_PEAK,
 	PLAYER_START,
+	SUMMIT,
+	TERRAIN_CENTER,
 } from "../world/everestSite";
 
 type Vec3Tuple = [number, number, number];
@@ -19,8 +19,8 @@ const toTuple = (v: Vector3): Vec3Tuple => [v.x, v.y, v.z];
 const fromTuple = (t: Vec3Tuple) => new Vector3(t[0], t[1], t[2]);
 
 const VIEWPOINTS = {
-	conePeak: toTuple(CONE_PEAK),
-	coneBase: toTuple(CONE_CENTER),
+	summit: toTuple(SUMMIT),
+	terrainCenter: toTuple(TERRAIN_CENTER),
 	playerStart: toTuple(PLAYER_START),
 	boxCluster: toTuple(BOX_CLUSTER_ORIGIN),
 	earthCenter: [0, 0, 0] as Vec3Tuple,
