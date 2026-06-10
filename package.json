@@ -8,7 +8,8 @@
 		"build": "tsc -b && vite build",
 		"lint": "eslint .",
 		"preview": "vite preview",
-		"preinstall": "npx only-allow pnpm"
+		"preinstall": "npx only-allow pnpm",
+		"build:heightmap": "node scripts/build-everest-heightmap.mjs"
 	},
 	"dependencies": {
 		"@react-three/drei": "^10.7.7",
@@ -32,6 +33,7 @@
 		"eslint": "^10.3.0",
 		"eslint-plugin-react-hooks": "^7.1.1",
 		"eslint-plugin-react-refresh": "^0.5.2",
+		"geotiff": "^3.0.5",
 		"globals": "^17.6.0",
 		"typescript": "~6.0.2",
 		"typescript-eslint": "^8.59.2",
