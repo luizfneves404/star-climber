@@ -53,6 +53,26 @@ function EarthMesh() {
 	);
 }
 
+function MoonMesh() {
+	const texture = useTexture("/textures/8k_moon.jpg");
+	return (
+		<mesh>
+			<sphereGeometry args={[MOON_RADIUS_M, 48, 48]} />
+			<meshStandardMaterial map={texture} />
+		</mesh>
+	);
+}
+
+function SunMesh() {
+	const texture = useTexture("/textures/8k_sun.jpg");
+	return (
+		<mesh>
+			<sphereGeometry args={[SUN_RADIUS_M, 48, 48]} />
+			<meshBasicMaterial map={texture} />
+		</mesh>
+	);
+}
+
 function Box({ position }: { position: Vector3 }) {
 	return (
 		<FloatingGroup absolute={position}>
@@ -87,17 +107,11 @@ export function Markers() {
 			</FloatingGroup>
 
 			<FloatingGroup absolute={MOON_POS}>
-				<mesh>
-					<sphereGeometry args={[MOON_RADIUS_M, 48, 48]} />
-					<meshStandardMaterial color="#9a9a9a" />
-				</mesh>
+				<MoonMesh />
 			</FloatingGroup>
 
 			<FloatingGroup absolute={SUN_POS}>
-				<mesh>
-					<sphereGeometry args={[SUN_RADIUS_M, 48, 48]} />
-					<meshBasicMaterial color="#ffd66b" />
-				</mesh>
+				<SunMesh />
 			</FloatingGroup>
 
 			<FloatingGroup absolute={STAR_POS}>

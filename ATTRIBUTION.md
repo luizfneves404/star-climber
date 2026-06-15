@@ -26,6 +26,26 @@ This texture is provided under the Creative Commons Attribution 4.0 Internationa
 - **Include a link** to [https://creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/)
 - **Indicate any modifications** made to the work (in this project's case: none)
 
+## Moon Texture
+
+**File:** `public/textures/8k_moon.jpg`
+
+- **Title:** Solarsystemscope Texture 8k Moon
+- **Creator:** [Solar System Scope](https://www.solarsystemscope.com/)
+- **License:** [CC-BY 4.0 (Creative Commons Attribution 4.0 International)](https://creativecommons.org/licenses/by/4.0/)
+- **Source:** [Solar System Scope Textures](https://www.solarsystemscope.com/textures/)
+- **Modifications:** None. Texture is used as-is, applied via `@react-three/drei`'s `useTexture` to a `MeshStandardMaterial` in the `MoonMesh` component.
+
+## Sun Texture
+
+**File:** `public/textures/8k_sun.jpg`
+
+- **Title:** Solarsystemscope Texture 8k Sun
+- **Creator:** [Solar System Scope](https://www.solarsystemscope.com/)
+- **License:** [CC-BY 4.0 (Creative Commons Attribution 4.0 International)](https://creativecommons.org/licenses/by/4.0/)
+- **Source:** [Solar System Scope Textures](https://www.solarsystemscope.com/textures/)
+- **Modifications:** None. Texture is used as-is, applied via `@react-three/drei`'s `useTexture` to a `MeshBasicMaterial` (unlit) in the `SunMesh` component.
+
 ## Ground Texture
 
 **File:** `public/textures/rocky_trail_diff_2k.jpg`
