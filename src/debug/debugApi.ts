@@ -12,14 +12,22 @@ import {
 	SUMMIT,
 	TERRAIN_CENTER,
 } from "../world/everestSite";
+import { HERO_GALAXIES, heroAnchor } from "../world/heroGalaxies";
 import { LANDMARKS_LOOK_AT, LANDMARKS_VIEWPOINT } from "../world/landmarksData";
+import { type FrameStats, readFrameStats } from "./frameProbe";
 
 type Vec3Tuple = [number, number, number];
 
 const toTuple = (v: Vector3): Vec3Tuple => [v.x, v.y, v.z];
 const fromTuple = (t: Vec3Tuple) => new Vector3(t[0], t[1], t[2]);
 
+// Each hero galaxy's center, keyed by name (e.g. viewpoints.andromeda).
+const heroViewpoints = Object.fromEntries(
+	HERO_GALAXIES.map((g) => [g.name, toTuple(heroAnchor(g))]),
+) as Record<string, Vec3Tuple>;
+
 const VIEWPOINTS = {
+	...heroViewpoints,
 	summit: toTuple(SUMMIT),
 	terrainCenter: toTuple(TERRAIN_CENTER),
 	playerStart: toTuple(PLAYER_START),
@@ -40,6 +48,8 @@ export interface DebugApi {
 	viewpoints: typeof VIEWPOINTS;
 	/** Earth's radius in meters, handy for offsetting viewpoints (e.g. `earthCenter` plus a surface radius). */
 	earthRadiusM: number;
+	/** Rolling N-frame timing average — read before/after adding a render layer to measure its FPS cost. */
+	frameStats: () => FrameStats;
 }
 
 const installDebugApi = (): DebugApi => {
@@ -51,6 +61,7 @@ const installDebugApi = (): DebugApi => {
 		},
 		viewpoints: VIEWPOINTS,
 		earthRadiusM: EARTH_RADIUS_M,
+		frameStats: readFrameStats,
 	};
 	(window as typeof window & { __debug: DebugApi }).__debug = api;
 	return api;

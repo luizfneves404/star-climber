@@ -2,7 +2,9 @@ import { Canvas } from "@react-three/fiber";
 import { useDebugApi } from "../debug/debugApi";
 import { PlayerRig } from "../player/PlayerRig";
 import { FAR_M, NEAR_M } from "../world/constants";
+import { HeroGalaxies } from "../world/HeroGalaxies";
 import { Markers } from "../world/Markers";
+import { MilkyWay } from "../world/MilkyWay";
 
 // The Sun sits along +X, so light the scene from there.
 const SUN_DIR: [number, number, number] = [1, 0, 0];
@@ -29,6 +31,8 @@ export function Scene() {
 				<ambientLight intensity={0.25} />
 				<directionalLight position={SUN_DIR} intensity={1.4} />
 				<Markers />
+				<MilkyWay />
+				<HeroGalaxies />
 				<PlayerRig />
 			</Canvas>
 		</div>

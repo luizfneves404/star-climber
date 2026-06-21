@@ -32,10 +32,15 @@ The single `<Canvas>` uses `logarithmicDepthBuffer: true`. This has been verifie
 - `src/world/FloatingGroup.tsx` — camera-relative transform; every scene object wraps itself in one.
 - `src/world/everestSite.ts` — **shared source of truth** for the Everest site: the local frame at Everest's lat/lon, and named layout points (`TERRAIN_CENTER`, `SUMMIT`, `PLAYER_START`, `BOX_CLUSTER_ORIGIN`, …), all in absolute meters. `playerStore` and `Markers`/`Mountain` import from here — change site geometry here, not in consumers.
 - `src/world/Markers.tsx` — true-scale test content (summit boxes, Earth, Moon, Sun, star, galaxy marker).
+- `src/world/galaxy.ts` — `makeGalaxy(params)`: the shared procedural galaxy generator (seeded PRNG, three density functions — spiral/elliptical/irregular, color-by-population). Returns a `BufferGeometry` with `position`/`color`/`aSize` (where `aSize` is per-point **luminosity**, not size). The Milky Way and every hero galaxy are instances of this.
+- `src/world/StarPoints.ts` — `makeStarPointsMaterial()`: the shared additive point-cloud `ShaderMaterial`. Stars are point sources: drawn at a **constant pixel size** (`aSize` only adds a slight bloom to the brightest) with **brightness ∝ luminosity / distance²** (`aSize / s²`, distance normalized by the cloud's `refDistM` to dodge float32 overflow), a tight core + faint halo sprite, and `uOpacity` for fades. So stars stay crisp pinpoints and read as *brighter*, not *bigger*. **Includes the `<common>` + logdepthbuf shader chunks — mandatory, or points z-fight the log-depth scene.**
+- `src/world/MilkyWay.tsx` — the Milky Way, first `makeGalaxy` instance; the Sun is embedded in the disk (band from inside, spiral from outside), with a gentle distance-from-Sun opacity ramp.
+- `src/world/heroGalaxies.ts` / `src/world/HeroGalaxies.tsx` — `HERO_GALAXIES` data array (~8 real named galaxies at real RA/Dec/distance) and the component mapping each to a `makeGalaxy` cloud. v1: always-on, no distance swap.
+- `src/debug/frameProbe.ts` — allocation-free rolling frame-time average; `PlayerRig` records each frame, exposed as `window.__debug.frameStats()`.
 - `src/world/everestTerrain.ts` — builds the Everest diorama `BufferGeometry` (513×513 grid, elevation vertex colors, edge feathering) from `public/terrain/everest_heightmap.bin`, generated offline by `scripts/build-everest-heightmap.mjs` (rerun via `pnpm build:heightmap`).
 - `src/world/Mountain.tsx` — true-scale Everest terrain from the Copernicus GLO-30 heightmap, diorama-style borders feathered into the flat ground plane, anchored at `groundAnchor`.
 - `src/world/Ground.tsx` — textured sea-level ground plane (60 km flat plane, tiling CC0 rock texture).
-- `src/world/constants.ts` — physical constants, `NEAR_M`/`FAR_M`, `latLonToUnitVector`.
+- `src/world/constants.ts` — physical constants, `NEAR_M`/`FAR_M` (far plane is `1e27` for space content — log depth keeps the near field crisp), `SUN_POS`, `latLonToUnitVector`, `raDecToUnitVector` (world axes ≈ ICRS equatorial; starfield not registered to Everest's horizon).
 - `src/player/playerStore.ts` — Zustand. Player `position` (absolute Earth-centered meters, float64), `orientation` (Quaternion), `yaw`/`pitch`, and free-fly `speed`. Exposes `teleport(position, lookAt?)`.
 - `src/player/PlayerRig.tsx` — sole per-frame input integrator. Advances `yaw`/`pitch`/`position`, pins the camera at origin, writes the HUD.
 - `src/player/freeFlyControls.ts` — `useFreeFlyControls`: pointer-lock mouse-look, WASD/QE/Space/Ctrl, scroll-wheel speed. Input lives in a ref; `PlayerRig` reads via `isDown`/`consumeLook`.
@@ -67,10 +72,11 @@ Then `browser_take_screenshot` to inspect. The canvas is WebGL — DOM snapshots
 
 Available on `window.__debug`:
 - `teleport(position, lookAt?)` — `[x,y,z]` tuples in absolute Earth-centered meters.
-- `viewpoints` — precomputed landmarks: `summit`, `terrainCenter`, `playerStart`, `boxCluster`, `earthCenter`, `moon`, `sun`.
+- `viewpoints` — precomputed landmarks: `summit`, `terrainCenter`, `playerStart`, `boxCluster`, `earthCenter`, `moon`, `sun`, plus one per hero galaxy by name (`andromeda`, `triangulum`, `lmc`, `smc`, `whirlpool`, `sombrero`, `m81`, `pinwheel`) — each is the galaxy center.
 - `earthRadiusM` — useful for offsetting a surface viewpoint.
+- `frameStats()` — rolling N-frame `{ avgFrameMs, fps, samples }`; read before/after adding a render layer to measure its FPS cost.
 
-When adding a new landmark, extend `VIEWPOINTS` in `debugApi.ts`.
+When adding a new landmark, extend `VIEWPOINTS` in `debugApi.ts`. Hero-galaxy viewpoints are generated from `HERO_GALAXIES`.
 
 ## Current state & what's next
 

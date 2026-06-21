@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { PLAYER_START, SUMMIT } from "../world/everestSite";
 
 export const MIN_SPEED_MPS = 1; // m/s — slow enough to inspect the boxes
-export const MAX_SPEED_MPS = 1e20; // m/s — fast enough to reach the galaxy marker
+export const MAX_SPEED_MPS = 1e24; // m/s — fast enough to reach the galaxy marker
 const INITIAL_SPEED_MPS = 5; // m/s — a brisk walk
 
 /** Derives yaw/pitch (radians, world +Y up, no roll) so a viewer at `from` faces `to`. */

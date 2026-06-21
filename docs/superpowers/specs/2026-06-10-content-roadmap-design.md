@@ -85,29 +85,62 @@ a `LANDMARKS` data array:
 
 ## Milestone 4: Space content
 
-Layered, mostly-real point clouds. Nobody renders "billions of stars" — real
-per-star data only exists for our stellar neighborhood, so the standard
-approach (Gaia Sky, Space Engine) is catalog stars near, hand-drawn galaxy
-far:
+Layered point clouds: real per-star/-galaxy data where it exists, procedural
+star clouds where it doesn't. Real per-star data only covers our stellar
+neighborhood, so the standard approach (Gaia Sky, Space Engine) is catalog
+stars near, invented galaxy stars far. We already invent the Milky Way's bulk
+stars from a density function — so the same generator, reused, lets a handful
+of **nearby galaxies resolve from fuzzy blobs into fields of individual stars
+as you fly to them**, which is the headline payoff of this milestone.
 
 | Layer | Data | Rendering |
 |---|---|---|
 | Solar system | real distances, fixed epoch | textured spheres mapped from a `PLANETS` array (Solar System Scope texture pack, same CC-BY as the Earth daymap) |
 | Stars | HYG catalog (~120 k real stars: positions, magnitudes, colors, names; few-MB CSV preprocessed to a binary buffer) | **one** `THREE.Points` cloud with a single float64 anchor at the Sun; point brightness/size from magnitude |
-| Milky Way | artificial particle cloud: ~100 k particles generated at load from a spiral density function (arms + central bulge + thin disk) | one more Points cloud; optional later polish: additive core-glow sprite |
-| Outer galaxies | real catalog (~30 k brightest galaxies from a redshift survey) — superclusters emerge for free from real positions | second Points cloud |
+| Milky Way | procedural: ~100 k particles from a spiral density function (arms + central bulge + thin disk) | the first instance of the shared `makeGalaxy()` generator; additive core-glow sprite for the bulge |
+| Local Group / hero galaxies | ~8–12 real, named galaxies (M31 Andromeda, M33 Triangulum, LMC, SMC, M51 Whirlpool, M104 Sombrero, M81, M101 Pinwheel) at real position/size/inclination; **stars are procedural** (no per-star data exists for them) | more `makeGalaxy()` instances, one float64 anchor each; always-on Points cloud + glow sprite, no distance swap in v1 |
+| Outer galaxies | real catalog (~30 k brightest galaxies from a redshift survey) — superclusters emerge for free from real positions; **hero galaxies excluded** to avoid double-rendering | one Points cloud, the cosmic-web backdrop |
 
-- **Transitions**: catalog stars genuinely shrink into a clump as you fly
-  out; the artificial galaxy fades in via distance-from-Sun-driven opacity
-  (a per-frame uniform). No tiers, no cross-fade canvases — one continuous
-  scene.
-- **Floating origin preserved**: one float64 subtract per *cloud anchor* per
-  frame, not per star. Float32 error within a cloud is invisible at the view
-  scales where the cloud is on screen.
-- **No LOD**: point counts in the 100 k range don't need it.
+- **`makeGalaxy()` — the shared generator**: `makeGalaxy({ type, radius,
+  particleCount, palette, inclination, positionAngle, anchor, seed }) →
+  THREE.Points`. The Milky Way is just its first instance; there is no
+  special-case Milky-Way path. Three density functions cover the morphologies
+  — **spiral** (arms + bulge + thin disk), **elliptical** (smooth radial
+  falloff), **irregular** (lumpy blob, for the Magellanic Clouds) — picked by
+  `type`. A **seeded PRNG per galaxy** keeps each cloud stable across reloads.
+  **Color by stellar population** inside the density function (bluer arms,
+  yellow-red bulge) does most of the "looks like a galaxy" work for free.
+  Recognition comes from real position + overall shape + tilt, *not*
+  photographic detail — explicitly no dust lanes, HII regions, or tidal tails.
+  Not a morphology framework: three functions and a param struct, full stop.
+- **Why only ~10 hero galaxies, not the whole universe**: the bottleneck is
+  storage, not frame rate. ~2 trillion galaxies / ~10²² stars cannot be held
+  in GPU memory (even galaxies-as-points would be ~24 TB); a true procedural
+  universe must *store nothing* and generate-on-demand with chunk streaming and
+  impostor LOD cascades — a whole engine, and one that would only invent
+  fictional galaxies you can't fly into. Beyond a certain distance a procedural
+  galaxy is indistinguishable from a catalog blob, and the catalog blobs have
+  the advantage of being *real*. So: invent stars only where you can actually
+  fly in and see them; use real blobs for everything else.
+- **Transitions**: catalog stars genuinely shrink into a clump as you fly out;
+  the Milky-Way cloud fades in via distance-from-Sun-driven opacity (a per-frame
+  uniform). No tiers, no cross-fade canvases — one continuous scene. Hero
+  galaxies are always-on in v1 (their additive points overlap into a smudge
+  from far, the sprite supplies the glow); the **fallback** if overdraw is too
+  costly is a distance-driven sprite↔cloud crossfade reusing that same uniform.
+- **Floating origin preserved**: one float64 subtract per *cloud/galaxy anchor*
+  per frame, not per star. Within a galaxy, stars are light-years apart, so
+  float32-relative positions resolve them — float32 error is invisible at the
+  view scales where a cloud is on screen.
+- **No LOD**: point counts in the 100 k range (and ~10 of them) don't need it —
+  but this is the one place perf can bite (overdraw when zoomed out).
 - **Objective perf gate**: before adding layers, add a frame-time probe to
-  `window.__debug` (N-frame average, readable via Playwright). Every layer
-  lands with a measured FPS cost.
+  `window.__debug` (N-frame average, readable via Playwright). Every layer —
+  and every hero galaxy — lands with a measured FPS cost.
+- **Shared body shape**: hero galaxies carry the same
+  `{ name, position, radius, viewpoint }` shape the HUD (milestone 5) and
+  fly-to (milestone 6) consume, so "fly to Andromeda" works for free. Size that
+  shape with galaxies in mind when it's formalized.
 
 ## Milestone 5: HUD markers
 
@@ -139,7 +172,9 @@ Each step independently shippable, in this order:
 1. Ground texture
 2. Everest DEM mesh
 3. Landmarks
-4. `__debug` frame-time probe → solar system → stars → galaxy → outer galaxies
+4. `__debug` frame-time probe → solar system → stars → Milky Way (via
+   `makeGalaxy()`) → hero galaxies (Andromeda first to prove the generator +
+   transition, then the rest) → outer-galaxy catalog
 5. HUD panel + labels
 6. Fly-to
 
@@ -150,3 +185,10 @@ Each step independently shippable, in this order:
 - Orbital motion / ephemerides — positions are static at a fixed epoch
 - Terrain LOD, curved terrain, satellite imagery, runtime height queries
 - Gaia-scale star data (HYG is enough; it's the actual night sky)
+- A full procedural universe (generate-on-demand all ~2 trillion galaxies with
+  chunk streaming / impostor LOD) — storage makes a stored version impossible
+  and the on-demand version is a whole engine that only invents galaxies you
+  can't fly into. Hero galaxies get procedural *stars* near; real catalog blobs
+  cover the rest. Procedural galaxies are deliberately impressionistic — no
+  photographic morphology, dust lanes, or tidal tails — not real per-star
+  catalogs.

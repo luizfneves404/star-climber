@@ -1,5 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { Quaternion, Vector3 } from "three";
+import { recordFrame } from "../debug/frameProbe";
 import { useHudStore } from "../ui/hudStore";
 import { useFreeFlyControls } from "./freeFlyControls";
 import { usePlayerStore } from "./playerStore";
@@ -84,6 +85,9 @@ export function PlayerRig() {
 
 		// --- HUD readout ---
 		useHudStore.getState().update(player.position.length());
+
+		// --- perf probe (window.__debug.frameStats()) ---
+		recordFrame(dt);
 	}, -1);
 
 	return null;

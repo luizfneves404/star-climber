@@ -3,7 +3,6 @@ import { Vector3 } from "three";
 import {
 	AU_M,
 	EARTH_RADIUS_M,
-	GALAXY_DIST_M,
 	MOON_DIST_M,
 	MOON_RADIUS_M,
 	STAR_DIST_M,
@@ -35,13 +34,11 @@ const EARTH_POS = new Vector3(0, 0, 0);
 const MOON_POS = along(MOON_DIST_M);
 const SUN_POS = along(AU_M);
 const STAR_POS = along(STAR_DIST_M);
-const GALAXY_POS = along(GALAXY_DIST_M);
 
 // Visible-marker radii for the outermost objects (true radii would be sub-pixel
 // dots; these are deliberately oversized so something is on screen out there —
 // the test is that coordinates don't explode, not photometric accuracy).
 const STAR_MARKER_R = 5e9;
-const GALAXY_MARKER_R = 1e19;
 
 function EarthMesh() {
 	const texture = useTexture("/textures/earth_daymap.jpg");
@@ -118,13 +115,6 @@ export function Markers() {
 				<mesh>
 					<sphereGeometry args={[STAR_MARKER_R, 16, 16]} />
 					<meshBasicMaterial color="#ffffff" />
-				</mesh>
-			</FloatingGroup>
-
-			<FloatingGroup absolute={GALAXY_POS}>
-				<mesh>
-					<sphereGeometry args={[GALAXY_MARKER_R, 24, 24]} />
-					<meshBasicMaterial color="#a070d0" wireframe />
 				</mesh>
 			</FloatingGroup>
 		</>
