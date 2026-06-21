@@ -9,7 +9,8 @@
 		"lint": "eslint .",
 		"preview": "vite preview",
 		"preinstall": "npx only-allow pnpm",
-		"build:heightmap": "node scripts/build-everest-heightmap.mjs"
+		"build:heightmap": "node scripts/build-everest-heightmap.mjs",
+		"deploy": "pnpm build && wrangler pages deploy dist --project-name=star-climber"
 	},
 	"dependencies": {
 		"@react-three/drei": "^10.7.7",
@@ -37,6 +38,7 @@
 		"globals": "^17.6.0",
 		"typescript": "~6.0.2",
 		"typescript-eslint": "^8.59.2",
-		"vite": "^8.0.12"
+		"vite": "^8.0.12",
+		"wrangler": "^4.103.0"
 	}
 }
