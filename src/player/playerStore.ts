@@ -1,5 +1,6 @@
 import { Euler, MathUtils, Quaternion, type Vector3 } from "three";
 import { create } from "zustand";
+import type { Body } from "../world/bodies";
 import { PLAYER_START, SUMMIT } from "../world/everestSite";
 
 export const MIN_SPEED_MPS = 1; // m/s — slow enough to inspect the boxes
@@ -13,6 +14,16 @@ const lookAtAngles = (from: Vector3, to: Vector3) => {
 		yaw: Math.atan2(-dir.x, -dir.z),
 		pitch: Math.asin(MathUtils.clamp(dir.y, -1, 1)),
 	};
+};
+
+/** Quaternion (no roll) so a viewer at `from` faces `to`. Reused by teleport and fly-to. */
+export const lookAtQuaternion = (
+	from: Vector3,
+	to: Vector3,
+	out = new Quaternion(),
+): Quaternion => {
+	const { pitch, yaw } = lookAtAngles(from, to);
+	return out.setFromEuler(new Euler(pitch, yaw, 0, "YXZ"));
 };
 
 const initialAngles = lookAtAngles(PLAYER_START, SUMMIT);
@@ -44,6 +55,16 @@ interface PlayerState {
 	 * For driving the camera from outside the frame loop (see `src/debug/debugApi.ts`).
 	 */
 	teleport: (position: Vector3, lookAt?: Vector3) => void;
+	/**
+	 * Body the player is gliding toward, or null. Set by `startFlyTo`; the glide
+	 * itself runs in `PlayerRig` (the sole integrator). Cleared on arrival or
+	 * when the player gives any movement input.
+	 */
+	flyToTarget: Body | null;
+	/** Begin a fly-to glide to `body`. */
+	startFlyTo: (body: Body) => void;
+	/** Cancel any in-progress glide. */
+	cancelFlyTo: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -71,4 +92,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 		}
 		set(next);
 	},
+	flyToTarget: null,
+	startFlyTo: (body) => set({ flyToTarget: body }),
+	cancelFlyTo: () => set({ flyToTarget: null }),
 }));

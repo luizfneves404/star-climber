@@ -29,6 +29,11 @@ Remaining build order (each step independently shippable):
 Content stays decoupled from logic the boring way: plain data arrays mapped in ordinary JSX, components split by domain as they grow. A generic content registry was considered and rejected (JSX already is the declarative content format). Physics was also considered and rejected — flying around is already the fun part.
 
 
+3. on load page popup: attribution, instructions, etc
+4. another "universe", reorganizing all the content so its side by side, allowing the user to compare sizes and fly around in the same manner
+
+
+
 ## Building and Running
 
 ```bash

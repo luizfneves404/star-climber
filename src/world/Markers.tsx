@@ -1,13 +1,13 @@
 import { useTexture } from "@react-three/drei";
-import { Vector3 } from "three";
+import type { Vector3 } from "three";
 import {
-	AU_M,
-	EARTH_RADIUS_M,
-	MOON_DIST_M,
-	MOON_RADIUS_M,
-	STAR_DIST_M,
-	SUN_RADIUS_M,
-} from "./constants";
+	EARTH_POS,
+	MOON_POS,
+	STAR_MARKER_R,
+	STAR_POS,
+	SUN_POS,
+} from "./bodies";
+import { EARTH_RADIUS_M, MOON_RADIUS_M, SUN_RADIUS_M } from "./constants";
 import { BOX_CLUSTER_ORIGIN, surfaceQuat, tangent, up } from "./everestSite";
 import { FloatingGroup } from "./FloatingGroup";
 import { Ground } from "./Ground";
@@ -28,17 +28,9 @@ const BOX_A = boxAt(1, 0);
 const BOX_B = boxAt(1, 2.01);
 const BOX_C = boxAt(3.01, 0);
 
-// --- Bodies, true scale, strung out along +X by increasing distance ---
-const along = (d: number) => new Vector3(d, 0, 0);
-const EARTH_POS = new Vector3(0, 0, 0);
-const MOON_POS = along(MOON_DIST_M);
-const SUN_POS = along(AU_M);
-const STAR_POS = along(STAR_DIST_M);
-
-// Visible-marker radii for the outermost objects (true radii would be sub-pixel
-// dots; these are deliberately oversized so something is on screen out there —
-// the test is that coordinates don't explode, not photometric accuracy).
-const STAR_MARKER_R = 5e9;
+// Body positions + the oversized Proxima marker radius are the metadata in
+// bodies.ts (the shared source of truth); imported here so the rendered meshes
+// can't drift from the HUD / fly-to targets.
 
 function EarthMesh() {
 	const texture = useTexture("/textures/earth_daymap.jpg");

@@ -5,14 +5,14 @@
 import { useEffect } from "react";
 import { Vector3 } from "three";
 import { usePlayerStore } from "../player/playerStore";
-import { AU_M, EARTH_RADIUS_M, MOON_DIST_M } from "../world/constants";
+import { BODIES, bodyById } from "../world/bodies";
+import { EARTH_RADIUS_M } from "../world/constants";
 import {
 	BOX_CLUSTER_ORIGIN,
 	PLAYER_START,
 	SUMMIT,
 	TERRAIN_CENTER,
 } from "../world/everestSite";
-import { HERO_GALAXIES, heroAnchor } from "../world/heroGalaxies";
 import { LANDMARKS_LOOK_AT, LANDMARKS_VIEWPOINT } from "../world/landmarksData";
 import { type FrameStats, readFrameStats } from "./frameProbe";
 
@@ -21,13 +21,16 @@ type Vec3Tuple = [number, number, number];
 const toTuple = (v: Vector3): Vec3Tuple => [v.x, v.y, v.z];
 const fromTuple = (t: Vec3Tuple) => new Vector3(t[0], t[1], t[2]);
 
-// Each hero galaxy's center, keyed by name (e.g. viewpoints.andromeda).
-const heroViewpoints = Object.fromEntries(
-	HERO_GALAXIES.map((g) => [g.name, toTuple(heroAnchor(g))]),
+// Body centers, keyed by id (earth, moon, sun, proxima, andromeda, …) — the
+// shared bodies list is the source of truth (see src/world/bodies.ts).
+const bodyViewpoints = Object.fromEntries(
+	BODIES.map((b) => [b.id, toTuple(b.position)]),
 ) as Record<string, Vec3Tuple>;
 
 const VIEWPOINTS = {
-	...heroViewpoints,
+	...bodyViewpoints,
+	/** Alias for the Earth body center, kept for the documented `__debug` name. */
+	earthCenter: [0, 0, 0] as Vec3Tuple,
 	summit: toTuple(SUMMIT),
 	terrainCenter: toTuple(TERRAIN_CENTER),
 	playerStart: toTuple(PLAYER_START),
@@ -36,14 +39,13 @@ const VIEWPOINTS = {
 	landmarkExhibit: toTuple(LANDMARKS_VIEWPOINT),
 	/** Look-at target to pair with landmarkExhibit — the Burj Khalifa at 100 m height. */
 	landmarkExhibitLookAt: toTuple(LANDMARKS_LOOK_AT),
-	earthCenter: [0, 0, 0] as Vec3Tuple,
-	moon: [MOON_DIST_M, 0, 0] as Vec3Tuple,
-	sun: [AU_M, 0, 0] as Vec3Tuple,
 } satisfies Record<string, Vec3Tuple>;
 
 export interface DebugApi {
 	/** Jump to `position` (absolute Earth-centered meters). If `lookAt` is given, faces that point. */
 	teleport: (position: Vec3Tuple, lookAt?: Vec3Tuple) => void;
+	/** Glide to a body by id (earth, moon, sun, proxima, andromeda, …, everest). */
+	flyTo: (id: string) => void;
 	/** Precomputed absolute positions for key landmarks — pass these straight to `teleport`. */
 	viewpoints: typeof VIEWPOINTS;
 	/** Earth's radius in meters, handy for offsetting viewpoints (e.g. `earthCenter` plus a surface radius). */
@@ -58,6 +60,10 @@ const installDebugApi = (): DebugApi => {
 			usePlayerStore
 				.getState()
 				.teleport(fromTuple(position), lookAt ? fromTuple(lookAt) : undefined);
+		},
+		flyTo: (id) => {
+			const body = bodyById(id);
+			if (body) usePlayerStore.getState().startFlyTo(body);
 		},
 		viewpoints: VIEWPOINTS,
 		earthRadiusM: EARTH_RADIUS_M,

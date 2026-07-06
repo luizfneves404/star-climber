@@ -5,6 +5,7 @@ import { FAR_M, NEAR_M } from "../world/constants";
 import { HeroGalaxies } from "../world/HeroGalaxies";
 import { Markers } from "../world/Markers";
 import { MilkyWay } from "../world/MilkyWay";
+import { HudProjector } from "./HudProjector";
 
 // The Sun sits along +X, so light the scene from there.
 const SUN_DIR: [number, number, number] = [1, 0, 0];
@@ -34,6 +35,7 @@ export function Scene() {
 				<MilkyWay />
 				<HeroGalaxies />
 				<PlayerRig />
+				<HudProjector />
 			</Canvas>
 		</div>
 	);
