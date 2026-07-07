@@ -1,4 +1,5 @@
 import { usePlayerStore } from "../player/playerStore";
+import { ACTIVE_WORLD } from "../world/activeWorld";
 import { BODIES } from "../world/bodies";
 import { fmtDist } from "./format";
 import { useHudMarkersStore } from "./hudMarkersStore";
@@ -80,6 +81,17 @@ export function BodyPanel() {
 					</div>
 				);
 			})}
+			<div style={{ marginTop: 6, opacity: 0.6 }}>
+				{ACTIVE_WORLD === "sizes" ? (
+					<a href="?world=universe" style={{ color: "#8fd0ff" }}>
+						→ universe
+					</a>
+				) : (
+					<a href="?world=sizes" style={{ color: "#8fd0ff" }}>
+						→ size comparison
+					</a>
+				)}
+			</div>
 		</div>
 	);
 }

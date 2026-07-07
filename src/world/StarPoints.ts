@@ -24,6 +24,9 @@ import { AdditiveBlending, ShaderMaterial } from "three";
 const vertexShader = /* glsl */ `
 	attribute float aSize;   // per-point luminosity (see galaxy.ts)
 	attribute vec3 color;
+	#ifdef USE_POINT_FADE
+	attribute float aFade;   // per-point CPU-driven fade (galaxy impostors)
+	#endif
 	uniform float uRefDist;       // cloud reference radius (meters) for distance normalization
 	uniform float uBrightnessCoef; // dimensionless brightness scale
 	uniform float uBasePx;        // constant point size in CSS px
@@ -48,6 +51,9 @@ const vertexShader = /* glsl */ `
 		// overflows float32 (>3.4e38 → Inf), which would zero out brightness.
 		float s = length(mvPosition.xyz / uRefDist);
 		vBrightness = aSize * uBrightnessCoef / max(s * s, 1e-6);
+		#ifdef USE_POINT_FADE
+		vBrightness *= aFade;
+		#endif
 
 		#include <logdepthbuf_vertex>
 	}
@@ -85,6 +91,12 @@ export interface StarPointsOptions {
 	bloomPx?: number;
 	/** Initial cloud opacity (animate via material.uniforms.uOpacity.value). */
 	opacity?: number;
+	/**
+	 * Enable the per-point `aFade` attribute (multiplied into brightness). Must be
+	 * define-gated: a missing attribute reads as 0 in WebGL, so compiling `aFade`
+	 * into clouds that don't supply it would black them out entirely.
+	 */
+	perPointFade?: boolean;
 }
 
 /** Build the shared additive points material. Each cloud gets its own instance. */
@@ -94,6 +106,7 @@ export function makeStarPointsMaterial({
 	basePx = 1.8,
 	bloomPx = 3,
 	opacity = 1,
+	perPointFade = false,
 }: StarPointsOptions): ShaderMaterial {
 	return new ShaderMaterial({
 		vertexShader,
@@ -108,7 +121,9 @@ export function makeStarPointsMaterial({
 			uPixelRatio: { value: window.devicePixelRatio || 1 },
 			uOpacity: { value: opacity },
 		},
-		defines: { USE_LOGDEPTHBUF: "" },
+		defines: perPointFade
+			? { USE_LOGDEPTHBUF: "", USE_POINT_FADE: "" }
+			: { USE_LOGDEPTHBUF: "" },
 		transparent: true,
 		depthWrite: false,
 		blending: AdditiveBlending,

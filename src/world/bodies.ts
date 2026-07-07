@@ -4,6 +4,7 @@
 // __debug.viewpoints, so they can't drift. Everything is in absolute
 // Earth-centered meters (float64); see FloatingGroup.tsx.
 import { Vector3 } from "three";
+import { ACTIVE_WORLD } from "./activeWorld";
 import {
 	AU_M,
 	EARTH_RADIUS_M,
@@ -14,6 +15,7 @@ import {
 } from "./constants";
 import { PLAYER_START, SUMMIT } from "./everestSite";
 import { HERO_GALAXIES, heroAnchor } from "./heroGalaxies";
+import { SIZES_BODIES } from "./sizesGallery";
 
 /** Visible marker radius for Proxima — its true radius is sub-pixel, so the
  * test marker (and the fly-to framing distance) use this oversized value. */
@@ -53,7 +55,7 @@ const GALAXY_DISPLAY: Record<string, string> = {
 	pinwheel: "Pinwheel",
 };
 
-export const BODIES: Body[] = [
+const UNIVERSE_BODIES: Body[] = [
 	{ id: "earth", name: "Earth", position: EARTH_POS, radius: EARTH_RADIUS_M },
 	{ id: "moon", name: "Moon", position: MOON_POS, radius: MOON_RADIUS_M },
 	{ id: "sun", name: "Sun", position: SUN_POS, radius: SUN_RADIUS_M },
@@ -80,6 +82,11 @@ export const BODIES: Body[] = [
 		viewpoint: { position: PLAYER_START.clone(), lookAt: SUMMIT.clone() },
 	},
 ];
+
+// Every consumer (HudProjector, BodyPanel, HudMarkers, debugApi, fly-to) reads
+// this switched list, so they all work in both worlds with no changes.
+export const BODIES: Body[] =
+	ACTIVE_WORLD === "sizes" ? SIZES_BODIES : UNIVERSE_BODIES;
 
 export const bodyById = (id: string): Body | undefined =>
 	BODIES.find((b) => b.id === id);

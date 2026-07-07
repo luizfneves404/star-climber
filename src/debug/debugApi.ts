@@ -6,7 +6,8 @@ import { useEffect } from "react";
 import { Vector3 } from "three";
 import { usePlayerStore } from "../player/playerStore";
 import { BODIES, bodyById } from "../world/bodies";
-import { EARTH_RADIUS_M } from "../world/constants";
+import { EARTH_RADIUS_M, SUN_POS } from "../world/constants";
+import { DEEP_FIELD_RADIUS } from "../world/DeepField";
 import {
 	BOX_CLUSTER_ORIGIN,
 	PLAYER_START,
@@ -39,6 +40,10 @@ const VIEWPOINTS = {
 	landmarkExhibit: toTuple(LANDMARKS_VIEWPOINT),
 	/** Look-at target to pair with landmarkExhibit — the Burj Khalifa at 100 m height. */
 	landmarkExhibitLookAt: toTuple(LANDMARKS_LOOK_AT),
+	/** Near the edge of the observable universe (95% of the deep-field radius). */
+	deepFieldRim: toTuple(
+		SUN_POS.clone().add(new Vector3(DEEP_FIELD_RADIUS * 0.95, 0, 0)),
+	),
 } satisfies Record<string, Vec3Tuple>;
 
 export interface DebugApi {

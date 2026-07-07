@@ -1,10 +1,10 @@
 import { Euler, MathUtils, Quaternion, type Vector3 } from "three";
 import { create } from "zustand";
 import type { Body } from "../world/bodies";
-import { PLAYER_START, SUMMIT } from "../world/everestSite";
+import { INITIAL_POSE } from "../world/startPose";
 
 export const MIN_SPEED_MPS = 1; // m/s — slow enough to inspect the boxes
-export const MAX_SPEED_MPS = 1e24; // m/s — fast enough to reach the galaxy marker
+export const MAX_SPEED_MPS = 1e30; // m/s — fast enough to reach the galaxy marker
 const INITIAL_SPEED_MPS = 5; // m/s — a brisk walk
 
 /** Derives yaw/pitch (radians, world +Y up, no roll) so a viewer at `from` faces `to`. */
@@ -26,7 +26,7 @@ export const lookAtQuaternion = (
 	return out.setFromEuler(new Euler(pitch, yaw, 0, "YXZ"));
 };
 
-const initialAngles = lookAtAngles(PLAYER_START, SUMMIT);
+const initialAngles = lookAtAngles(INITIAL_POSE.position, INITIAL_POSE.lookAt);
 const initialOrientation = new Quaternion().setFromEuler(
 	new Euler(initialAngles.pitch, initialAngles.yaw, 0, "YXZ"),
 );
@@ -68,7 +68,7 @@ interface PlayerState {
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
-	position: PLAYER_START.clone(),
+	position: INITIAL_POSE.position.clone(),
 	orientation: initialOrientation.clone(),
 	yaw: initialAngles.yaw,
 	pitch: initialAngles.pitch,

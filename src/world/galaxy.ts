@@ -35,10 +35,25 @@ export interface GalaxyParams {
 	/** Rotation of the projected major axis. */
 	positionAngleDeg?: number;
 	seed?: number;
+	/** Spiral only: number of arms. */
+	armCount?: number;
+	/** Spiral only: radians of arm winding from center to rim. */
+	twistRad?: number;
+	/** Spiral only: base azimuthal scatter σ (radians) around the arm ridge. */
+	armScatterRad?: number;
+	/** Spiral only: fraction of points in the central bulge. */
+	bulgeFrac?: number;
+	/** Spiral only: fraction in the diffuse (armless) thin disk — keeps the
+	 * inter-arm region glowing so arms read as ridges, not isolated ribbons. */
+	diffuseFrac?: number;
+	/** Spiral only: fraction in the thick disk (~3.5× thin-disk height). */
+	thickDiskFrac?: number;
+	/** Spiral only: fraction in the spherical stellar halo (0.1R–2R). */
+	haloFrac?: number;
 }
 
-/** Small, fast, seedable PRNG. */
-function mulberry32(seed: number): () => number {
+/** Small, fast, seedable PRNG. Also used by the deep field (DeepField.tsx). */
+export function mulberry32(seed: number): () => number {
 	let a = seed >>> 0;
 	return () => {
 		a = (a + 0x6d2b79f5) | 0;
@@ -66,7 +81,20 @@ export function makeGalaxy(params: GalaxyParams): BufferGeometry {
 		inclinationDeg = 0,
 		positionAngleDeg = 0,
 		seed = 1,
+		armCount = 2,
+		twistRad = 4.5,
+		armScatterRad = 0.12,
+		bulgeFrac = 0.15,
+		diffuseFrac = 0.25,
+		thickDiskFrac = 0.13,
+		haloFrac = 0.05,
 	} = params;
+
+	// Cumulative population thresholds for the spiral branch; arms take the rest.
+	const BULGE_T = bulgeFrac;
+	const DIFFUSE_T = BULGE_T + diffuseFrac;
+	const THICK_T = DIFFUSE_T + thickDiskFrac;
+	const HALO_T = THICK_T + haloFrac;
 
 	const rng = mulberry32(seed);
 	const positions = new Float32Array(particleCount * 3);
@@ -99,30 +127,63 @@ export function makeGalaxy(params: GalaxyParams): BufferGeometry {
 		let lum: number; // luminosity → drives brightness, not size
 
 		if (type === "spiral") {
-			const ARMS = 2;
-			const TWIST = 4.0; // radians of winding from center to rim
-			if (rng() < 0.25) {
+			// Five populations picked on one draw: bulge, diffuse thin disk (armless —
+			// makes the arms read as bright ridges on a continuous disk instead of
+			// isolated streaks), thick disk, spherical halo, and the arms themselves.
+			const pop = rng();
+			if (pop < BULGE_T) {
 				// central bulge: a rounded gaussian blob, old (core) color
-				const br = radiusM * 0.12;
+				const br = radiusM * 0.15;
 				x = gaussian(rng) * br;
-				y = gaussian(rng) * br * 0.7;
+				y = gaussian(rng) * br * 0.75;
 				z = gaussian(rng) * br;
 				t = 0;
 				lum = 1.5 + rng() * 2.0; // bright old core
-			} else {
-				// disk + arms: denser toward center, points wound onto ARMS arms
+			} else if (pop < DIFFUSE_T) {
+				// diffuse thin disk: same radial law as the arms, no azimuthal preference
 				const r = radiusM * Math.sqrt(rng());
-				const arm = Math.floor(rng() * ARMS);
-				const baseAngle = (arm / ARMS) * Math.PI * 2;
-				const scatter = gaussian(rng) * 0.25;
-				const theta = baseAngle + (r / radiusM) * TWIST + scatter;
+				const theta = rng() * Math.PI * 2;
 				x = Math.cos(theta) * r;
 				z = Math.sin(theta) * r;
-				const thickness = radiusM * 0.02 * (1 - (r / radiusM) * 0.7);
-				y = gaussian(rng) * thickness;
+				y = gaussian(rng) * radiusM * 0.025;
 				t = Math.min(1, r / radiusM + 0.2);
-				lum = 0.4 + rng() * 0.8; // ordinary disk star, low baseline
-				if (rng() < 0.03) lum *= 5.0; // bright star-forming knot
+				lum = 0.35 + rng() * 0.55;
+			} else if (pop < THICK_T) {
+				// thick disk: puffier (~3.5× thin), older/warmer stars
+				const r = radiusM * Math.sqrt(rng());
+				const theta = rng() * Math.PI * 2;
+				x = Math.cos(theta) * r;
+				z = Math.sin(theta) * r;
+				y = gaussian(rng) * radiusM * 0.09;
+				t = 0.15;
+				lum = 0.25 + rng() * 0.4;
+			} else if (pop < HALO_T) {
+				// spherical stellar halo: log-uniform radius 0.1R–2R (≈ r⁻³ density),
+				// old stars — from inside, this is what puts stars above/below the disk
+				const r = radiusM * 0.1 * 20 ** rng();
+				const u = rng() * 2 - 1;
+				const phi = rng() * Math.PI * 2;
+				const sxz = Math.sqrt(1 - u * u);
+				x = r * sxz * Math.cos(phi);
+				y = r * u;
+				z = r * sxz * Math.sin(phi);
+				t = 0.05;
+				lum = 0.2 + rng() * 0.3;
+			} else {
+				// arms: denser toward center, wound onto armCount log-ish arms; scatter
+				// grows outward so inner arms are tight and rims fray naturally
+				const r = radiusM * Math.sqrt(rng());
+				const arm = Math.floor(rng() * armCount);
+				const baseAngle = (arm / armCount) * Math.PI * 2;
+				const sigma = armScatterRad * (0.4 + 0.9 * (r / radiusM));
+				const theta =
+					baseAngle + (r / radiusM) * twistRad + gaussian(rng) * sigma;
+				x = Math.cos(theta) * r;
+				z = Math.sin(theta) * r;
+				y = gaussian(rng) * radiusM * 0.025;
+				t = Math.min(1, r / radiusM + 0.2);
+				lum = 0.5 + rng() * 0.7;
+				if (rng() < 0.05) lum *= 5.0; // bright star-forming knot
 			}
 		} else if (type === "elliptical") {
 			// smooth ellipsoid, gaussian radial falloff, slight flattening

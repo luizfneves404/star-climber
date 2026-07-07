@@ -1,4 +1,5 @@
 import { usePlayerStore } from "../player/playerStore";
+import { ACTIVE_WORLD } from "../world/activeWorld";
 import { EARTH_RADIUS_M } from "../world/constants";
 import { fmtDist, fmtSpeed } from "./format";
 import { useHudStore } from "./hudStore";
@@ -23,8 +24,14 @@ export function Hud() {
 				letterSpacing: 0.3,
 			}}
 		>
-			<div>altitude: {fmtDist(altitude)}</div>
-			<div>dist from center: {fmtDist(distanceMeters)}</div>
+			{ACTIVE_WORLD === "sizes" ? (
+				<div>dist from origin: {fmtDist(distanceMeters)}</div>
+			) : (
+				<>
+					<div>altitude: {fmtDist(altitude)}</div>
+					<div>dist from center: {fmtDist(distanceMeters)}</div>
+				</>
+			)}
 			<div>speed: {fmtSpeed(speed)}</div>
 		</div>
 	);

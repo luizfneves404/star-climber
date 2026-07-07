@@ -35,6 +35,7 @@ export const HERO_GALAXIES: HeroGalaxy[] = [
 		positionAngleDeg: 35,
 		palette: SPIRAL_PALETTE,
 		particleCount: 90_000,
+		armCount: 2,
 		seed: 31,
 	},
 	{
@@ -48,6 +49,7 @@ export const HERO_GALAXIES: HeroGalaxy[] = [
 		positionAngleDeg: 23,
 		palette: SPIRAL_PALETTE,
 		particleCount: 45_000,
+		armCount: 2,
 		seed: 33,
 	},
 	{
@@ -87,6 +89,7 @@ export const HERO_GALAXIES: HeroGalaxy[] = [
 		positionAngleDeg: 10,
 		palette: SPIRAL_PALETTE,
 		particleCount: 55_000,
+		armCount: 2,
 		seed: 51,
 	},
 	{
@@ -113,6 +116,7 @@ export const HERO_GALAXIES: HeroGalaxy[] = [
 		positionAngleDeg: 65,
 		palette: SPIRAL_PALETTE,
 		particleCount: 55_000,
+		armCount: 2,
 		seed: 81,
 	},
 	{
@@ -126,6 +130,7 @@ export const HERO_GALAXIES: HeroGalaxy[] = [
 		positionAngleDeg: 0,
 		palette: SPIRAL_PALETTE,
 		particleCount: 70_000,
+		armCount: 4,
 		seed: 101,
 	},
 ];

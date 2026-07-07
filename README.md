@@ -13,24 +13,21 @@ Star Climber renders, in one continuous coordinate space with logarithmic depth 
 - A textured sea-level ground plane (60 km, tiling rock texture) that the Everest diorama rises out of
 - A size-comparison landmark exhibit (human → bus → whale → 10-storey building → Burj Khalifa)
 - A true-scale Earth sphere textured with an 8k daymap, plus a textured Moon and Sun
-- The Milky Way — a procedurally generated galaxy (seeded, density-function-based) with the Sun embedded in its disk
-- 8 real named hero galaxies (Andromeda, Triangulum, the Magellanic Clouds, Whirlpool, Sombrero, M81, Pinwheel) at their real right ascension / declination / distance
+- The Milky Way — a procedurally generated galaxy (seeded, density-function-based: 4 arms, diffuse disk, thick disk, bulge, stellar halo) with the Sun embedded in its disk, plus a local-star bubble so the sky is filled in every direction from the solar system
+- 8 real named hero galaxies (Andromeda, Triangulum, the Magellanic Clouds, Whirlpool, Sombrero, M81, Pinwheel) at their real right ascension / declination / distance — each cross-fades to a single point of light past ~40–120 galaxy radii, the way real unresolved galaxies look
+- The observable universe in simple form: a 200k-point deep field out to the 46 Gly comoving radius (each point one galaxy, redshift-tinted), fading in as you leave the Milky Way; at the rim, forward goes black
+- A second world at `?world=sizes`: the same engine, but true-scale objects lined up in increasing size (human → bus → whale → Burj Khalifa → Everest → Moon → Earth → Jupiter → Sun → Betelgeuse → Neptune's orbit → the Milky Way)
 
 The core engineering challenge is rendering seamlessly across ~27 orders of magnitude when float32 only holds ~7 digits of precision — solved with a floating-origin camera (see `CLAUDE.md` for details).
 
 ## Current state & what's next
 
-The floating-origin base and the full layered space-content pass are done. See `docs/superpowers/specs/2026-06-10-content-roadmap-design.md` for the full design and `CLAUDE.md`'s file map for how the pieces fit together.
-
-Remaining build order (each step independently shippable):
-1. **HUD markers** — projected labels + distance for in-view bodies, side panel with toggles for all of them.
-2. **Fly-to** — log-distance glide (equal time per order of magnitude) to auto-derived or hand-authored viewpoints, cancelled by any movement input.
+The content roadmap is closed: floating-origin base, layered space content out to the edge of the observable universe, HUD markers, fly-to, and the size-comparison world (`?world=sizes`, switched by a URL param read once at load — a page reload, not a router). See `CLAUDE.md`'s file map for how the pieces fit together.
 
 Content stays decoupled from logic the boring way: plain data arrays mapped in ordinary JSX, components split by domain as they grow. A generic content registry was considered and rejected (JSX already is the declarative content format). Physics was also considered and rejected — flying around is already the fun part.
 
-
-3. on load page popup: attribution, instructions, etc
-4. another "universe", reorganizing all the content so its side by side, allowing the user to compare sizes and fly around in the same manner
+Remaining ideas:
+1. on load page popup: attribution, instructions, etc
 
 
 

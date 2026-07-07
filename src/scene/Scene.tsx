@@ -1,14 +1,11 @@
 import { Canvas } from "@react-three/fiber";
 import { useDebugApi } from "../debug/debugApi";
 import { PlayerRig } from "../player/PlayerRig";
+import { ACTIVE_WORLD } from "../world/activeWorld";
 import { FAR_M, NEAR_M } from "../world/constants";
-import { HeroGalaxies } from "../world/HeroGalaxies";
-import { Markers } from "../world/Markers";
-import { MilkyWay } from "../world/MilkyWay";
 import { HudProjector } from "./HudProjector";
-
-// The Sun sits along +X, so light the scene from there.
-const SUN_DIR: [number, number, number] = [1, 0, 0];
+import { SizesWorld } from "./SizesWorld";
+import { UniverseWorld } from "./UniverseWorld";
 
 /**
  * A SINGLE render layer — the explicit floating-origin hypothesis
@@ -18,6 +15,9 @@ const SUN_DIR: [number, number, number] = [1, 0, 0];
  * and the Sun at 1 AU in the same frame — no tiers, no cross-fade, no second
  * canvas. If the close boxes z-fight in practice, that's the signal to add a
  * second normal-depth canvas for human-scale geometry (the documented fallback).
+ *
+ * The world conditional is the entire world-switch mechanism (see activeWorld.ts):
+ * same canvas, same player rig, different content subtree.
  */
 export function Scene() {
 	useDebugApi();
@@ -29,11 +29,7 @@ export function Scene() {
 				gl={{ logarithmicDepthBuffer: true }}
 				style={{ width: "100%", height: "100%", background: "#05060a" }}
 			>
-				<ambientLight intensity={0.25} />
-				<directionalLight position={SUN_DIR} intensity={1.4} />
-				<Markers />
-				<MilkyWay />
-				<HeroGalaxies />
+				{ACTIVE_WORLD === "sizes" ? <SizesWorld /> : <UniverseWorld />}
 				<PlayerRig />
 				<HudProjector />
 			</Canvas>

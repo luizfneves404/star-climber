@@ -1,7 +1,15 @@
 // Shared HUD formatters — used by the readout, the body labels, and the panel.
+import { LIGHT_YEAR_M } from "../world/constants";
 
-/** Distance in meters → human-readable string (m / km / M km). */
+/** Distance in meters → human-readable string (m / km / M km / ly / Mly / Gly). */
 export const fmtDist = (m: number) => {
+	const ly = m / LIGHT_YEAR_M;
+	if (ly >= 1e8)
+		return `${(ly / 1e9).toLocaleString(undefined, { maximumFractionDigits: 2 })} Gly`;
+	if (ly >= 1e5)
+		return `${(ly / 1e6).toLocaleString(undefined, { maximumFractionDigits: 1 })} Mly`;
+	if (ly >= 0.1)
+		return `${ly.toLocaleString(undefined, { maximumFractionDigits: 2 })} ly`;
 	const km = m / 1000;
 	if (km >= 1e6)
 		return `${(km / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })}M km`;
